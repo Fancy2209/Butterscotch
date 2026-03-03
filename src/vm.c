@@ -340,8 +340,8 @@ static void resolveVariableWrite(VMContext* ctx, int16_t instanceType, uint32_t 
         }
     }
 
-    bool shouldTraceGlobal = false;
-    bool shouldTraceInstance = false;
+    bool shouldLogGlobal = false;
+    bool shouldLogInstance = false;
 
     RValue* dest;
     switch (instanceType) {
@@ -351,20 +351,20 @@ static void resolveVariableWrite(VMContext* ctx, int16_t instanceType, uint32_t 
             break;
         case INSTANCE_GLOBAL:
             require(ctx->globalVarCount > (uint32_t) varDef->varID);
-            shouldTraceGlobal = shgeti(ctx->tracedGlobalVars, varDef->name) != -1 || shgeti(ctx->tracedGlobalVars, "*") != -1;
+            shouldLogGlobal = shgeti(ctx->watchedGlobalVars, varDef->name) != -1 || shgeti(ctx->watchedGlobalVars, "*") != -1;
             dest = &ctx->globalVars[varDef->varID];
             break;
         case INSTANCE_SELF:
         default:
             // INSTANCE_SELF or positive instanceType (object index)
             require(ctx->selfVarCount > (uint32_t) varDef->varID);
-            if (shlen(ctx->tracedInstanceVars) != 0) {
+            if (shlen(ctx->watchedInstanceVars) != 0) {
                 GameObject* obj = &ctx->dataWin->objt.objects[ctx->currentInstance->objectIndex];
 
                 char objNameWithVariableName[strlen(obj->name) + 1 + strlen(varDef->name) + 1];
                 snprintf(objNameWithVariableName, sizeof(objNameWithVariableName), "%s.%s", obj->name, varDef->name);
 
-                shouldTraceInstance = shgeti(ctx->tracedInstanceVars, obj->name) != -1 || shgeti(ctx->tracedInstanceVars, objNameWithVariableName) != -1 || shgeti(ctx->tracedInstanceVars, "*") != -1;
+                shouldLogInstance = shgeti(ctx->watchedInstanceVars, obj->name) != -1 || shgeti(ctx->watchedInstanceVars, objNameWithVariableName) != -1 || shgeti(ctx->watchedInstanceVars, "*") != -1;
             }
             dest = &ctx->selfVars[varDef->varID];
             break;
@@ -382,13 +382,13 @@ static void resolveVariableWrite(VMContext* ctx, int16_t instanceType, uint32_t 
     }
 
     // We are getting the NEW value on the dest pointer here (not the old one that was freed), that's why it works :)
-    if (shouldTraceGlobal) {
+    if (shouldLogGlobal) {
         char* rvalueAsString = RValue_toString(*dest);
         printf("VM: [%s] global.%s = %s\n", ctx->currentCodeName, varDef->name, rvalueAsString);
         free(rvalueAsString);
     }
 
-    if (shouldTraceInstance) {
+    if (shouldLogInstance) {
         char* rvalueAsString = RValue_toString(*dest);
         GameObject* obj = &ctx->dataWin->objt.objects[ctx->currentInstance->objectIndex];
 
@@ -1384,8 +1384,8 @@ void VM_free(VMContext* ctx) {
     shfree(ctx->globalVarNameMap);
     shfree(ctx->loggedUnknownFuncs);
     shfree(ctx->loggedStubbedFuncs);
-    shfree(ctx->tracedGlobalVars);
-    shfree(ctx->tracedInstanceVars);
+    shfree(ctx->watchedGlobalVars);
+    shfree(ctx->watchedInstanceVars);
     hmfree(ctx->varRefMap);
     hmfree(ctx->funcRefMap);
 

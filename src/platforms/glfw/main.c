@@ -26,8 +26,8 @@ typedef struct {
     const char* dataWinPath;
     const char* screenshotPattern;
     FrameSetEntry* screenshotFrames;
-    StringBooleanEntry* tracedGlobalVars;
-    StringBooleanEntry* tracedInstanceVars;
+    StringBooleanEntry* watchedGlobalVars;
+    StringBooleanEntry* watchedInstanceVars;
     bool headless;
     bool printRooms;
     bool printDeclaredFunctions;
@@ -42,8 +42,8 @@ static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) 
         {"headless",            no_argument,       nullptr, 'h'},
         {"print-rooms", no_argument,               nullptr, 'r'},
         {"print-declared-functions", no_argument,  nullptr, 'p'},
-        {"trace-global-vars", required_argument,         nullptr, 't'},
-        {"trace-instance-vars", required_argument,         nullptr, 'i'},
+        {"watch-global-vars", required_argument,         nullptr, 't'},
+        {"watch-instance-vars", required_argument,         nullptr, 'i'},
         {nullptr,               0,                 nullptr,  0 }
     };
 
@@ -76,10 +76,10 @@ static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) 
                 args->printDeclaredFunctions = true;
                 break;
             case 't':
-                shput(args->tracedGlobalVars, optarg, true);
+                shput(args->watchedGlobalVars, optarg, true);
                 break;
             case 'i':
-                shput(args->tracedInstanceVars, optarg, true);
+                shput(args->watchedInstanceVars, optarg, true);
                 break;
             default:
                 fprintf(stderr, "Usage: %s [--headless] [--screenshot=PATTERN] [--screenshot-at-frame=N ...] <path to data.win or game.unx>\n", argv[0]);
@@ -102,8 +102,8 @@ static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) 
 
 static void freeCommandLineArgs(CommandLineArgs* args) {
     hmfree(args->screenshotFrames);
-    shfree(args->tracedGlobalVars);
-    shfree(args->tracedInstanceVars);
+    shfree(args->watchedGlobalVars);
+    shfree(args->watchedInstanceVars);
 }
 
 // ===[ SCREENSHOT ]===
@@ -184,8 +184,8 @@ int main(int argc, char* argv[]) {
 
     // Initialize the runner
     Runner* runner = Runner_create(dataWin, vm);
-    shcopyFromTo(args.tracedGlobalVars, runner->vmContext->tracedGlobalVars);
-    shcopyFromTo(args.tracedInstanceVars, runner->vmContext->tracedInstanceVars);
+    shcopyFromTo(args.watchedGlobalVars, runner->vmContext->watchedGlobalVars);
+    shcopyFromTo(args.watchedInstanceVars, runner->vmContext->watchedInstanceVars);
 
     // Init GLFW
     if (!glfwInit()) {
