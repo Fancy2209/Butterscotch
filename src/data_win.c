@@ -11,7 +11,7 @@
 
 // Reads a pointer list header: count + absolute-offset pointers.
 // Caller must free the returned array.
-static uint32_t* DataWinReader_readPointerTable(BinaryReader* reader, uint32_t* outCount) {
+static uint32_t* readPointerTable(BinaryReader* reader, uint32_t* outCount) {
     *outCount = BinaryReader_readUint32(reader);
     if (*outCount == 0) return nullptr;
     uint32_t* ptrs = malloc(*outCount * sizeof(uint32_t));
@@ -22,9 +22,9 @@ static uint32_t* DataWinReader_readPointerTable(BinaryReader* reader, uint32_t* 
 }
 
 // Reads a PointerList of EventAction entries. Used by TMLN and OBJT.
-static EventAction* DataWinReader_readEventActions(BinaryReader* reader, uint32_t* outCount) {
+static EventAction* readEventActions(BinaryReader* reader, uint32_t* outCount) {
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     *outCount = count;
     if (count == 0) { free(ptrs); return nullptr; }
 
@@ -52,7 +52,7 @@ static EventAction* DataWinReader_readEventActions(BinaryReader* reader, uint32_
 
 // ===[ CHUNK PARSERS ]===
 
-static void DataWinReader_parseGEN8(BinaryReader* reader, DataWin* dw) {
+static void parseGEN8(BinaryReader* reader, DataWin* dw) {
     Gen8* g = &dw->gen8;
     g->isDebuggerDisabled = BinaryReader_readUint8(reader);
     g->bytecodeVersion = BinaryReader_readUint8(reader);
@@ -92,7 +92,7 @@ static void DataWinReader_parseGEN8(BinaryReader* reader, DataWin* dw) {
     }
 }
 
-static void DataWinReader_parseOPTN(BinaryReader* reader, DataWin* dw) {
+static void parseOPTN(BinaryReader* reader, DataWin* dw) {
     Optn* o = &dw->optn;
 
     int32_t marker = BinaryReader_readInt32(reader);
@@ -130,7 +130,7 @@ static void DataWinReader_parseOPTN(BinaryReader* reader, DataWin* dw) {
     }
 }
 
-static void DataWinReader_parseLANG(BinaryReader* reader, DataWin* dw) {
+static void parseLANG(BinaryReader* reader, DataWin* dw) {
     Lang* l = &dw->lang;
     l->unknown1 = BinaryReader_readUint32(reader);
     l->languageCount = BinaryReader_readUint32(reader);
@@ -167,11 +167,11 @@ static void DataWinReader_parseLANG(BinaryReader* reader, DataWin* dw) {
     }
 }
 
-static void DataWinReader_parseEXTN(BinaryReader* reader, DataWin* dw) {
+static void parseEXTN(BinaryReader* reader, DataWin* dw) {
     Extn* e = &dw->extn;
 
     uint32_t extCount;
-    uint32_t* extPtrs = DataWinReader_readPointerTable(reader, &extCount);
+    uint32_t* extPtrs = readPointerTable(reader, &extCount);
     e->count = extCount;
 
     if (extCount == 0) { free(extPtrs); e->extensions = nullptr; return; }
@@ -186,7 +186,7 @@ static void DataWinReader_parseEXTN(BinaryReader* reader, DataWin* dw) {
 
         // Files PointerList
         uint32_t fileCount;
-        uint32_t* filePtrs = DataWinReader_readPointerTable(reader, &fileCount);
+        uint32_t* filePtrs = readPointerTable(reader, &fileCount);
         ext->fileCount = fileCount;
 
         if (fileCount > 0) {
@@ -201,7 +201,7 @@ static void DataWinReader_parseEXTN(BinaryReader* reader, DataWin* dw) {
 
                 // Functions PointerList
                 uint32_t funcCount;
-                uint32_t* funcPtrs = DataWinReader_readPointerTable(reader, &funcCount);
+                uint32_t* funcPtrs = readPointerTable(reader, &funcCount);
                 file->functionCount = funcCount;
 
                 if (funcCount > 0) {
@@ -242,11 +242,11 @@ static void DataWinReader_parseEXTN(BinaryReader* reader, DataWin* dw) {
     // Skipped -- we seek to chunkEnd after parsing
 }
 
-static void DataWinReader_parseSOND(BinaryReader* reader, DataWin* dw) {
+static void parseSOND(BinaryReader* reader, DataWin* dw) {
     Sond* s = &dw->sond;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     s->count = count;
 
     if (count == 0) { free(ptrs); s->sounds = nullptr; return; }
@@ -278,11 +278,11 @@ static void DataWinReader_parseSOND(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseAGRP(BinaryReader* reader, DataWin* dw) {
+static void parseAGRP(BinaryReader* reader, DataWin* dw) {
     Agrp* a = &dw->agrp;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     a->count = count;
 
     if (count == 0) { free(ptrs); a->audioGroups = nullptr; return; }
@@ -295,11 +295,11 @@ static void DataWinReader_parseAGRP(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseSPRT(BinaryReader* reader, DataWin* dw) {
+static void parseSPRT(BinaryReader* reader, DataWin* dw) {
     Sprt* s = &dw->sprt;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     s->count = count;
 
     if (count == 0) { free(ptrs); s->sprites = nullptr; return; }
@@ -346,11 +346,11 @@ static void DataWinReader_parseSPRT(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseBGND(BinaryReader* reader, DataWin* dw) {
+static void parseBGND(BinaryReader* reader, DataWin* dw) {
     Bgnd* b = &dw->bgnd;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     b->count = count;
 
     if (count == 0) { free(ptrs); b->backgrounds = nullptr; return; }
@@ -368,11 +368,11 @@ static void DataWinReader_parseBGND(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parsePATH(BinaryReader* reader, DataWin* dw) {
+static void parsePATH(BinaryReader* reader, DataWin* dw) {
     PathChunk* p = &dw->path;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     p->count = count;
 
     if (count == 0) { free(ptrs); p->paths = nullptr; return; }
@@ -402,11 +402,11 @@ static void DataWinReader_parsePATH(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseSCPT(BinaryReader* reader, DataWin* dw) {
+static void parseSCPT(BinaryReader* reader, DataWin* dw) {
     Scpt* s = &dw->scpt;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     s->count = count;
 
     if (count == 0) { free(ptrs); s->scripts = nullptr; return; }
@@ -420,7 +420,7 @@ static void DataWinReader_parseSCPT(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseGLOB(BinaryReader* reader, DataWin* dw) {
+static void parseGLOB(BinaryReader* reader, DataWin* dw) {
     Glob* g = &dw->glob;
 
     g->count = BinaryReader_readUint32(reader);
@@ -434,11 +434,11 @@ static void DataWinReader_parseGLOB(BinaryReader* reader, DataWin* dw) {
     }
 }
 
-static void DataWinReader_parseSHDR(BinaryReader* reader, DataWin* dw) {
+static void parseSHDR(BinaryReader* reader, DataWin* dw) {
     Shdr* s = &dw->shdr;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     s->count = count;
 
     if (count == 0) { free(ptrs); s->shaders = nullptr; return; }
@@ -498,11 +498,11 @@ static void DataWinReader_parseSHDR(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseFONT(BinaryReader* reader, DataWin* dw) {
+static void parseFONT(BinaryReader* reader, DataWin* dw) {
     FontChunk* f = &dw->font;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     f->count = count;
 
     if (count == 0) { free(ptrs); f->fonts = nullptr; return; }
@@ -526,7 +526,7 @@ static void DataWinReader_parseFONT(BinaryReader* reader, DataWin* dw) {
 
         // Glyphs PointerList
         uint32_t glyphCount;
-        uint32_t* glyphPtrs = DataWinReader_readPointerTable(reader, &glyphCount);
+        uint32_t* glyphPtrs = readPointerTable(reader, &glyphCount);
         font->glyphCount = glyphCount;
 
         if (glyphCount > 0) {
@@ -564,11 +564,11 @@ static void DataWinReader_parseFONT(BinaryReader* reader, DataWin* dw) {
     // 512 bytes of trailing padding -- skipped by chunkEnd seek
 }
 
-static void DataWinReader_parseTMLN(BinaryReader* reader, DataWin* dw) {
+static void parseTMLN(BinaryReader* reader, DataWin* dw) {
     Tmln* t = &dw->tmln;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     t->count = count;
 
     if (count == 0) { free(ptrs); t->timelines = nullptr; return; }
@@ -593,7 +593,7 @@ static void DataWinReader_parseTMLN(BinaryReader* reader, DataWin* dw) {
             // Pass 2: Parse event action lists
             repeat(tl->momentCount, j) {
                 BinaryReader_seek(reader, eventPtrs[j]);
-                tl->moments[j].actions = DataWinReader_readEventActions(reader, &tl->moments[j].actionCount);
+                tl->moments[j].actions = readEventActions(reader, &tl->moments[j].actionCount);
             }
             free(eventPtrs);
         } else {
@@ -603,11 +603,11 @@ static void DataWinReader_parseTMLN(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseOBJT(BinaryReader* reader, DataWin* dw) {
+static void parseOBJT(BinaryReader* reader, DataWin* dw) {
     Objt* o = &dw->objt;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     o->count = count;
 
     if (count == 0) { free(ptrs); o->objects = nullptr; return; }
@@ -652,14 +652,14 @@ static void DataWinReader_parseOBJT(BinaryReader* reader, DataWin* dw) {
         // Outer pointer list: one entry per event type
         // Inner pointer list: events for that type
         uint32_t eventTypeCount;
-        uint32_t* eventTypePtrs = DataWinReader_readPointerTable(reader, &eventTypeCount);
+        uint32_t* eventTypePtrs = readPointerTable(reader, &eventTypeCount);
 
         for (uint32_t eventType = 0; eventTypeCount > eventType && OBJT_EVENT_TYPE_COUNT > eventType; eventType++) {
             BinaryReader_seek(reader, eventTypePtrs[eventType]);
 
             // Inner pointer list: events for this type
             uint32_t eventCount;
-            uint32_t* eventPtrs = DataWinReader_readPointerTable(reader, &eventCount);
+            uint32_t* eventPtrs = readPointerTable(reader, &eventCount);
 
             obj->eventLists[eventType].eventCount = eventCount;
 
@@ -668,7 +668,7 @@ static void DataWinReader_parseOBJT(BinaryReader* reader, DataWin* dw) {
                 repeat(eventCount, j) {
                     BinaryReader_seek(reader, eventPtrs[j]);
                     obj->eventLists[eventType].events[j].eventSubtype = BinaryReader_readUint32(reader);
-                    obj->eventLists[eventType].events[j].actions = DataWinReader_readEventActions(reader, &obj->eventLists[eventType].events[j].actionCount);
+                    obj->eventLists[eventType].events[j].actions = readEventActions(reader, &obj->eventLists[eventType].events[j].actionCount);
                 }
             } else {
                 obj->eventLists[eventType].events = nullptr;
@@ -688,11 +688,11 @@ static void DataWinReader_parseOBJT(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseROOM(BinaryReader* reader, DataWin* dw) {
+static void parseROOM(BinaryReader* reader, DataWin* dw) {
     RoomChunk* rc = &dw->room;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     rc->count = count;
 
     if (count == 0) { free(ptrs); rc->rooms = nullptr; return; }
@@ -728,7 +728,7 @@ static void DataWinReader_parseROOM(BinaryReader* reader, DataWin* dw) {
         BinaryReader_seek(reader, backgroundsPtr);
         {
             uint32_t bgCount;
-            uint32_t* bgPtrs = DataWinReader_readPointerTable(reader, &bgCount);
+            uint32_t* bgPtrs = readPointerTable(reader, &bgCount);
             for (uint32_t j = 0; bgCount > j && 8 > j; j++) {
                 BinaryReader_seek(reader, bgPtrs[j]);
                 RoomBackground* bg = &room->backgrounds[j];
@@ -754,7 +754,7 @@ static void DataWinReader_parseROOM(BinaryReader* reader, DataWin* dw) {
         BinaryReader_seek(reader, viewsPtr);
         {
             uint32_t viewCount;
-            uint32_t* viewPtrsArr = DataWinReader_readPointerTable(reader, &viewCount);
+            uint32_t* viewPtrsArr = readPointerTable(reader, &viewCount);
             for (uint32_t j = 0; viewCount > j && 8 > j; j++) {
                 BinaryReader_seek(reader, viewPtrsArr[j]);
                 RoomView* view = &room->views[j];
@@ -783,7 +783,7 @@ static void DataWinReader_parseROOM(BinaryReader* reader, DataWin* dw) {
         BinaryReader_seek(reader, gameObjectsPtr);
         {
             uint32_t objCount;
-            uint32_t* objPtrs = DataWinReader_readPointerTable(reader, &objCount);
+            uint32_t* objPtrs = readPointerTable(reader, &objCount);
             room->gameObjectCount = objCount;
 
             if (objCount > 0) {
@@ -812,7 +812,7 @@ static void DataWinReader_parseROOM(BinaryReader* reader, DataWin* dw) {
         BinaryReader_seek(reader, tilesPtr);
         {
             uint32_t tileCount;
-            uint32_t* tilePtrs = DataWinReader_readPointerTable(reader, &tileCount);
+            uint32_t* tilePtrs = readPointerTable(reader, &tileCount);
             room->tileCount = tileCount;
 
             if (tileCount > 0) {
@@ -842,11 +842,11 @@ static void DataWinReader_parseROOM(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseTPAG(BinaryReader* reader, DataWin* dw) {
+static void parseTPAG(BinaryReader* reader, DataWin* dw) {
     Tpag* t = &dw->tpag;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     t->count = count;
 
     if (count == 0) { free(ptrs); t->items = nullptr; return; }
@@ -870,7 +870,7 @@ static void DataWinReader_parseTPAG(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseCODE(BinaryReader* reader, DataWin* dw, uint32_t chunkLength) {
+static void parseCODE(BinaryReader* reader, DataWin* dw, uint32_t chunkLength) {
     Code* c = &dw->code;
 
     if (chunkLength == 0) {
@@ -884,7 +884,7 @@ static void DataWinReader_parseCODE(BinaryReader* reader, DataWin* dw, uint32_t 
     // (bytecodeRelAddr) that points to the actual bytecode blob elsewhere in the chunk.
 
     uint32_t codeCount;
-    uint32_t* codePtrs = DataWinReader_readPointerTable(reader, &codeCount);
+    uint32_t* codePtrs = readPointerTable(reader, &codeCount);
     c->count = codeCount;
 
     if (codeCount == 0) { free(codePtrs); c->entries = nullptr; return; }
@@ -908,7 +908,7 @@ static void DataWinReader_parseCODE(BinaryReader* reader, DataWin* dw, uint32_t 
     free(codePtrs);
 }
 
-static void DataWinReader_parseVARI(BinaryReader* reader, DataWin* dw, uint32_t chunkLength) {
+static void parseVARI(BinaryReader* reader, DataWin* dw, uint32_t chunkLength) {
     Vari* v = &dw->vari;
 
     v->varCount1 = BinaryReader_readUint32(reader);
@@ -934,7 +934,7 @@ static void DataWinReader_parseVARI(BinaryReader* reader, DataWin* dw, uint32_t 
     }
 }
 
-static void DataWinReader_parseFUNC(BinaryReader* reader, DataWin* dw) {
+static void parseFUNC(BinaryReader* reader, DataWin* dw) {
     Func* f = &dw->func;
 
     // Part 1: Functions SimpleList
@@ -974,11 +974,11 @@ static void DataWinReader_parseFUNC(BinaryReader* reader, DataWin* dw) {
     }
 }
 
-static void DataWinReader_parseSTRG(BinaryReader* reader, DataWin* dw) {
+static void parseSTRG(BinaryReader* reader, DataWin* dw) {
     Strg* s = &dw->strg;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     s->count = count;
 
     if (count == 0) { free(ptrs); s->strings = nullptr; return; }
@@ -992,11 +992,11 @@ static void DataWinReader_parseSTRG(BinaryReader* reader, DataWin* dw) {
     free(ptrs);
 }
 
-static void DataWinReader_parseTXTR(BinaryReader* reader, DataWin* dw, size_t chunkEnd) {
+static void parseTXTR(BinaryReader* reader, DataWin* dw, size_t chunkEnd) {
     Txtr* t = &dw->txtr;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     t->count = count;
 
     if (count == 0) { free(ptrs); t->textures = nullptr; return; }
@@ -1024,11 +1024,11 @@ static void DataWinReader_parseTXTR(BinaryReader* reader, DataWin* dw, size_t ch
     }
 }
 
-static void DataWinReader_parseAUDO(BinaryReader* reader, DataWin* dw) {
+static void parseAUDO(BinaryReader* reader, DataWin* dw) {
     Audo* a = &dw->audo;
 
     uint32_t count;
-    uint32_t* ptrs = DataWinReader_readPointerTable(reader, &count);
+    uint32_t* ptrs = readPointerTable(reader, &count);
     a->count = count;
 
     if (count == 0) { free(ptrs); a->entries = nullptr; return; }
@@ -1104,53 +1104,53 @@ DataWin* DataWin_parse(const char* filePath) {
         size_t chunkEnd = chunkDataStart + chunkLength;
 
         if (memcmp(chunkName, "GEN8", 4) == 0) {
-            DataWinReader_parseGEN8(&reader, dw);
+            parseGEN8(&reader, dw);
         } else if (memcmp(chunkName, "OPTN", 4) == 0) {
-            DataWinReader_parseOPTN(&reader, dw);
+            parseOPTN(&reader, dw);
         } else if (memcmp(chunkName, "LANG", 4) == 0) {
-            DataWinReader_parseLANG(&reader, dw);
+            parseLANG(&reader, dw);
         } else if (memcmp(chunkName, "EXTN", 4) == 0) {
-            DataWinReader_parseEXTN(&reader, dw);
+            parseEXTN(&reader, dw);
         } else if (memcmp(chunkName, "SOND", 4) == 0) {
-            DataWinReader_parseSOND(&reader, dw);
+            parseSOND(&reader, dw);
         } else if (memcmp(chunkName, "AGRP", 4) == 0) {
-            DataWinReader_parseAGRP(&reader, dw);
+            parseAGRP(&reader, dw);
         } else if (memcmp(chunkName, "SPRT", 4) == 0) {
-            DataWinReader_parseSPRT(&reader, dw);
+            parseSPRT(&reader, dw);
         } else if (memcmp(chunkName, "BGND", 4) == 0) {
-            DataWinReader_parseBGND(&reader, dw);
+            parseBGND(&reader, dw);
         } else if (memcmp(chunkName, "PATH", 4) == 0) {
-            DataWinReader_parsePATH(&reader, dw);
+            parsePATH(&reader, dw);
         } else if (memcmp(chunkName, "SCPT", 4) == 0) {
-            DataWinReader_parseSCPT(&reader, dw);
+            parseSCPT(&reader, dw);
         } else if (memcmp(chunkName, "GLOB", 4) == 0) {
-            DataWinReader_parseGLOB(&reader, dw);
+            parseGLOB(&reader, dw);
         } else if (memcmp(chunkName, "SHDR", 4) == 0) {
-            DataWinReader_parseSHDR(&reader, dw);
+            parseSHDR(&reader, dw);
         } else if (memcmp(chunkName, "FONT", 4) == 0) {
-            DataWinReader_parseFONT(&reader, dw);
+            parseFONT(&reader, dw);
         } else if (memcmp(chunkName, "TMLN", 4) == 0) {
-            DataWinReader_parseTMLN(&reader, dw);
+            parseTMLN(&reader, dw);
         } else if (memcmp(chunkName, "OBJT", 4) == 0) {
-            DataWinReader_parseOBJT(&reader, dw);
+            parseOBJT(&reader, dw);
         } else if (memcmp(chunkName, "ROOM", 4) == 0) {
-            DataWinReader_parseROOM(&reader, dw);
+            parseROOM(&reader, dw);
         } else if (memcmp(chunkName, "DAFL", 4) == 0) {
             // Empty chunk, nothing to parse
         } else if (memcmp(chunkName, "TPAG", 4) == 0) {
-            DataWinReader_parseTPAG(&reader, dw);
+            parseTPAG(&reader, dw);
         } else if (memcmp(chunkName, "CODE", 4) == 0) {
-            DataWinReader_parseCODE(&reader, dw, chunkLength);
+            parseCODE(&reader, dw, chunkLength);
         } else if (memcmp(chunkName, "VARI", 4) == 0) {
-            DataWinReader_parseVARI(&reader, dw, chunkLength);
+            parseVARI(&reader, dw, chunkLength);
         } else if (memcmp(chunkName, "FUNC", 4) == 0) {
-            DataWinReader_parseFUNC(&reader, dw);
+            parseFUNC(&reader, dw);
         } else if (memcmp(chunkName, "STRG", 4) == 0) {
-            DataWinReader_parseSTRG(&reader, dw);
+            parseSTRG(&reader, dw);
         } else if (memcmp(chunkName, "TXTR", 4) == 0) {
-            DataWinReader_parseTXTR(&reader, dw, chunkEnd);
+            parseTXTR(&reader, dw, chunkEnd);
         } else if (memcmp(chunkName, "AUDO", 4) == 0) {
-            DataWinReader_parseAUDO(&reader, dw);
+            parseAUDO(&reader, dw);
         } else {
             printf("Unknown chunk: %.4s (length %u at offset 0x%zX)\n", chunkName, chunkLength, chunkDataStart - 8);
         }

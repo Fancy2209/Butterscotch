@@ -27,7 +27,7 @@ typedef struct {
     bool headless;
 } CommandLineArgs;
 
-static void CommandLineArgs_parse(CommandLineArgs* args, int argc, char* argv[]) {
+static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) {
     memset(args, 0, sizeof(CommandLineArgs));
 
     static struct option longOptions[] = {
@@ -78,12 +78,12 @@ static void CommandLineArgs_parse(CommandLineArgs* args, int argc, char* argv[])
     }
 }
 
-static void CommandLineArgs_free(CommandLineArgs* args) {
+static void freeCommandLineArgs(CommandLineArgs* args) {
     hmfree(args->screenshotFrames);
 }
 
 // ===[ SCREENSHOT ]===
-static void Screenshot_capture(const char* filenamePattern, int frameNumber, int width, int height) {
+static void captureScreenshot(const char* filenamePattern, int frameNumber, int width, int height) {
     char filename[512];
     snprintf(filename, sizeof(filename), filenamePattern, frameNumber);
 
@@ -108,7 +108,7 @@ static void Screenshot_capture(const char* filenamePattern, int frameNumber, int
 // ===[ MAIN ]===
 int main(int argc, char* argv[]) {
     CommandLineArgs args;
-    CommandLineArgs_parse(&args, argc, argv);
+    parseCommandLineArgs(&args, argc, argv);
 
     printf("Loading %s...\n", args.dataWinPath);
 
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
     if (!glfwInit()) {
         fprintf(stderr, "Failed to initialize GLFW\n");
         DataWin_free(dataWin);
-        CommandLineArgs_free(&args);
+        freeCommandLineArgs(&args);
         return 1;
     }
 
@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Failed to create GLFW window\n");
         glfwTerminate();
         DataWin_free(dataWin);
-        CommandLineArgs_free(&args);
+        freeCommandLineArgs(&args);
         return 1;
     }
 
@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
         glfwDestroyWindow(window);
         glfwTerminate();
         DataWin_free(dataWin);
-        CommandLineArgs_free(&args);
+        freeCommandLineArgs(&args);
         return 1;
     }
 
@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
         bool shouldScreenshot = hmget(args.screenshotFrames, frameCount);
 
         if (shouldScreenshot) {
-            Screenshot_capture(args.screenshotPattern, frameCount, (int) gen8->defaultWindowWidth, (int) gen8->defaultWindowHeight);
+            captureScreenshot(args.screenshotPattern, frameCount, (int) gen8->defaultWindowWidth, (int) gen8->defaultWindowHeight);
 
             hmdel(args.screenshotFrames, frameCount);
 
@@ -184,6 +184,6 @@ int main(int argc, char* argv[]) {
     glfwDestroyWindow(window);
     glfwTerminate();
     DataWin_free(dataWin);
-    CommandLineArgs_free(&args);
+    freeCommandLineArgs(&args);
     return 0;
 }

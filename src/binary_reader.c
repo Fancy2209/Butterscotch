@@ -8,7 +8,7 @@ BinaryReader BinaryReader_create(const uint8_t* buffer, size_t size) {
     return (BinaryReader){.buffer = buffer, .size = size, .position = 0};
 }
 
-static void BinaryReader_boundsCheck(BinaryReader* reader, size_t bytes) {
+static void boundsCheck(BinaryReader* reader, size_t bytes) {
     if (reader->position + bytes > reader->size) {
         fprintf(stderr, "BinaryReader: read overflow at position 0x%zX (requested %zu bytes, buffer size 0x%zX)\n", reader->position, bytes, reader->size);
         exit(1);
@@ -16,14 +16,14 @@ static void BinaryReader_boundsCheck(BinaryReader* reader, size_t bytes) {
 }
 
 uint8_t BinaryReader_readUint8(BinaryReader* reader) {
-    BinaryReader_boundsCheck(reader, 1);
+    boundsCheck(reader, 1);
     uint8_t value = reader->buffer[reader->position];
     reader->position += 1;
     return value;
 }
 
 int16_t BinaryReader_readInt16(BinaryReader* reader) {
-    BinaryReader_boundsCheck(reader, 2);
+    boundsCheck(reader, 2);
     int16_t value;
     memcpy(&value, reader->buffer + reader->position, 2);
     reader->position += 2;
@@ -31,7 +31,7 @@ int16_t BinaryReader_readInt16(BinaryReader* reader) {
 }
 
 uint16_t BinaryReader_readUint16(BinaryReader* reader) {
-    BinaryReader_boundsCheck(reader, 2);
+    boundsCheck(reader, 2);
     uint16_t value;
     memcpy(&value, reader->buffer + reader->position, 2);
     reader->position += 2;
@@ -39,7 +39,7 @@ uint16_t BinaryReader_readUint16(BinaryReader* reader) {
 }
 
 int32_t BinaryReader_readInt32(BinaryReader* reader) {
-    BinaryReader_boundsCheck(reader, 4);
+    boundsCheck(reader, 4);
     int32_t value;
     memcpy(&value, reader->buffer + reader->position, 4);
     reader->position += 4;
@@ -47,7 +47,7 @@ int32_t BinaryReader_readInt32(BinaryReader* reader) {
 }
 
 uint32_t BinaryReader_readUint32(BinaryReader* reader) {
-    BinaryReader_boundsCheck(reader, 4);
+    boundsCheck(reader, 4);
     uint32_t value;
     memcpy(&value, reader->buffer + reader->position, 4);
     reader->position += 4;
@@ -55,7 +55,7 @@ uint32_t BinaryReader_readUint32(BinaryReader* reader) {
 }
 
 float BinaryReader_readFloat32(BinaryReader* reader) {
-    BinaryReader_boundsCheck(reader, 4);
+    boundsCheck(reader, 4);
     float value;
     memcpy(&value, reader->buffer + reader->position, 4);
     reader->position += 4;
@@ -63,7 +63,7 @@ float BinaryReader_readFloat32(BinaryReader* reader) {
 }
 
 uint64_t BinaryReader_readUint64(BinaryReader* reader) {
-    BinaryReader_boundsCheck(reader, 8);
+    boundsCheck(reader, 8);
     uint64_t value;
     memcpy(&value, reader->buffer + reader->position, 8);
     reader->position += 8;
@@ -85,13 +85,13 @@ const char* BinaryReader_readStringPtr(BinaryReader* reader) {
 }
 
 void BinaryReader_readBytes(BinaryReader* reader, void* dest, size_t count) {
-    BinaryReader_boundsCheck(reader, count);
+    boundsCheck(reader, count);
     memcpy(dest, reader->buffer + reader->position, count);
     reader->position += count;
 }
 
 void BinaryReader_skip(BinaryReader* reader, size_t bytes) {
-    BinaryReader_boundsCheck(reader, bytes);
+    boundsCheck(reader, bytes);
     reader->position += bytes;
 }
 
