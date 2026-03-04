@@ -48,6 +48,7 @@ typedef struct {
     double speedMultiplier;
     int seed;
     bool hasSeed;
+    bool debug;
 } CommandLineArgs;
 
 static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) {
@@ -74,6 +75,7 @@ static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) 
         {"dump-frame-json-file", required_argument, nullptr, 'J'},
         {"speed", required_argument, nullptr, 'M'},
         {"seed", required_argument, nullptr, 'Z'},
+        {"debug", no_argument, nullptr, 'D'},
         {nullptr,               0,                 nullptr,  0 }
     };
 
@@ -177,6 +179,9 @@ static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) 
                 args->speedMultiplier = speed;
                 break;
             }
+            case 'D':
+                args->debug = true;
+                break;
             case 'Z': {
                 char* endPtr;
                 long seedVal = strtol(optarg, &endPtr, 10);
@@ -371,6 +376,7 @@ int main(int argc, char* argv[]) {
 
     // Initialize the runner
     Runner* runner = Runner_create(dataWin, vm);
+    runner->debugMode = args.debug;
     shcopyFromTo(args.varReadsToBeTraced, runner->vmContext->varReadsToBeTraced);
     shcopyFromTo(args.varWritesToBeTraced, runner->vmContext->varWritesToBeTraced);
     shcopyFromTo(args.functionCallsToBeTraced, runner->vmContext->functionCallsToBeTraced);
@@ -427,42 +433,87 @@ int main(int argc, char* argv[]) {
     Runner_initFirstRoom(runner);
 
     // Main loop
+    bool debugPaused = false;
     double lastFrameTime = glfwGetTime();
     while (!glfwWindowShouldClose(window) && !runner->shouldExit) {
         // Clear last frame's pressed/released state, then poll new input events
         RunnerKeyboard_beginFrame(runner->keyboard);
         glfwPollEvents();
 
-        if (args.traceFrames)
-            printf("Frame %d (Start)\n", runner->frameCount);
+        // Debug key bindings
+        if (runner->debugMode) {
+            // Pause
+            if (RunnerKeyboard_checkPressed(runner->keyboard, 'P')) {
+                debugPaused = !debugPaused;
+                fprintf(stderr, "Debug: %s\n", debugPaused ? "Paused" : "Resumed");
+            }
 
-        // Run one game step (Begin Step, Keyboard, Alarms, Step, End Step, room transitions)
-        Runner_step(runner);
+            // Go to next room
+            if (RunnerKeyboard_checkPressed(runner->keyboard, VK_PAGEUP)) {
+                DataWin* dw = runner->dataWin;
+                if ((int32_t) dw->gen8.roomOrderCount > runner->currentRoomOrderPosition + 1) {
+                    int32_t nextIdx = dw->gen8.roomOrder[runner->currentRoomOrderPosition + 1];
+                    runner->pendingRoom = nextIdx;
+                    fprintf(stderr, "Debug: Going to next room -> %s\n", dw->room.rooms[nextIdx].name);
+                }
+            }
 
-        // Dump full runner state if this frame was requested
-        if (hmget(args.dumpFrames, runner->frameCount)) {
-            Runner_dumpState(runner);
+            // Go to previous room
+            if (RunnerKeyboard_checkPressed(runner->keyboard, VK_PAGEDOWN)) {
+                DataWin* dw = runner->dataWin;
+                if (runner->currentRoomOrderPosition > 0) {
+                    int32_t prevIdx = dw->gen8.roomOrder[runner->currentRoomOrderPosition - 1];
+                    runner->pendingRoom = prevIdx;
+                    fprintf(stderr, "Debug: Going to previous room -> %s\n", dw->room.rooms[prevIdx].name);
+                }
+            }
+
+            // Dump runner state to console
+            if (RunnerKeyboard_checkPressed(runner->keyboard, VK_F12)) {
+                fprintf(stderr, "Debug: Dumping runner state at frame %d\n", runner->frameCount);
+                Runner_dumpState(runner);
+            }
         }
 
-        // Dump runner state as JSON if this frame was requested
-        if (hmget(args.dumpJsonFrames, runner->frameCount)) {
-            char* json = Runner_dumpStateJson(runner);
-            if (args.dumpJsonFilePattern != nullptr) {
-                char filename[512];
-                snprintf(filename, sizeof(filename), args.dumpJsonFilePattern, runner->frameCount);
-                FILE* f = fopen(filename, "w");
-                if (f != nullptr) {
-                    fwrite(json, 1, strlen(json), f);
-                    fputc('\n', f);
-                    fclose(f);
-                    printf("JSON dump saved: %s\n", filename);
-                } else {
-                    fprintf(stderr, "Error: Could not write JSON dump to '%s'\n", filename);
-                }
-            } else {
-                printf("%s\n", json);
+        // Run the game step if the game is paused
+        bool shouldStep = true;
+        if (runner->debugMode && debugPaused) {
+            shouldStep = RunnerKeyboard_checkPressed(runner->keyboard, 'O');
+            if (shouldStep) fprintf(stderr, "Debug: Frame advance (frame %d)\n", runner->frameCount);
+        }
+
+        if (shouldStep) {
+            if (args.traceFrames)
+                printf("Frame %d (Start)\n", runner->frameCount);
+
+            // Run one game step (Begin Step, Keyboard, Alarms, Step, End Step, room transitions)
+            Runner_step(runner);
+
+            // Dump full runner state if this frame was requested
+            if (hmget(args.dumpFrames, runner->frameCount)) {
+                Runner_dumpState(runner);
             }
-            free(json);
+
+            // Dump runner state as JSON if this frame was requested
+            if (hmget(args.dumpJsonFrames, runner->frameCount)) {
+                char* json = Runner_dumpStateJson(runner);
+                if (args.dumpJsonFilePattern != nullptr) {
+                    char filename[512];
+                    snprintf(filename, sizeof(filename), args.dumpJsonFilePattern, runner->frameCount);
+                    FILE* f = fopen(filename, "w");
+                    if (f != nullptr) {
+                        fwrite(json, 1, strlen(json), f);
+                        fputc('\n', f);
+                        fclose(f);
+                        printf("JSON dump saved: %s\n", filename);
+                    } else {
+                        fprintf(stderr, "Error: Could not write JSON dump to '%s'\n", filename);
+                    }
+                } else {
+                    printf("%s\n", json);
+                }
+                free(json);
+            }
         }
 
         Room* activeRoom = runner->currentRoom;
@@ -528,7 +579,7 @@ int main(int argc, char* argv[]) {
             glfwSetWindowShouldClose(window, GLFW_TRUE);
         }
 
-        if (args.traceFrames)
+        if (shouldStep && args.traceFrames)
             printf("Frame %d (End)\n", runner->frameCount);
 
         glfwSwapBuffers(window);
