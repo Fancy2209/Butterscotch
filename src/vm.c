@@ -279,7 +279,7 @@ static bool shouldTraceVariable(StringBooleanEntry* traceMap, const char* scopeN
 
 typedef struct {
     int32_t arrayIndex; // -1 when not an array access
-    int16_t instanceType; // Instance type from stack (for VARTYPE_ARRAY)
+    int32_t instanceType; // Instance type from stack (for VARTYPE_ARRAY / VARTYPE_STACKTOP)
     bool isArray;
     bool hasInstanceType; // true when instanceType was popped from stack
 } ArrayAccess;
@@ -288,7 +288,7 @@ typedef struct {
 // indicates an array or stacktop access. Returns { .arrayIndex = -1, .isArray = false }
 // for plain variable access.
 static ArrayAccess popArrayAccess(VMContext* ctx, uint32_t varRef) {
-    uint8_t varType = (varRef >> 24) & 0xFF;
+    uint8_t varType = (varRef >> 24) & 0xF8;
     if (varType == VARTYPE_ARRAY) {
         // For array reads, GMS pushes: instanceType then arrayIndex (arrayIndex on top)
         RValue indexVal = stackPop(ctx);
@@ -296,21 +296,22 @@ static ArrayAccess popArrayAccess(VMContext* ctx, uint32_t varRef) {
         RValue_free(&indexVal);
 
         RValue instTypeVal = stackPop(ctx);
-        int16_t instanceType = (int16_t) RValue_toInt32(instTypeVal);
+        int32_t instanceType = RValue_toInt32(instTypeVal);
         RValue_free(&instTypeVal);
 
         return (ArrayAccess){ .arrayIndex = arrayIndex, .instanceType = instanceType, .isArray = true, .hasInstanceType = true };
     }
     if (varType == VARTYPE_STACKTOP) {
         RValue stacktop = stackPop(ctx);
+        int32_t instanceType = RValue_toInt32(stacktop);
         RValue_free(&stacktop);
-        return (ArrayAccess){ .arrayIndex = -1, .isArray = true, .hasInstanceType = false };
+        return (ArrayAccess){ .arrayIndex = -1, .isArray = false, .hasInstanceType = true, .instanceType = instanceType };
     }
     return (ArrayAccess){ .arrayIndex = -1, .isArray = false, .hasInstanceType = false };
 }
 
 // ===[ Variable Resolution ]===
-static const char* instanceTypeName(int16_t instanceType) {
+static const char* instanceTypeName(int32_t instanceType) {
     switch (instanceType) {
         case INSTANCE_SELF: return "self";
         case INSTANCE_OTHER: return "other";
@@ -327,43 +328,59 @@ static Variable* resolveVarDef(VMContext* ctx, uint32_t varRef) {
     return varDef;
 }
 
-// Finds the first active instance of a given object index.
-// Used when instanceType >= 0 (object reference in GML, e.g. obj_introimage.image_index).
-static Instance* findInstanceByObjectIndex(VMContext* ctx, int16_t objectIndex) {
+// Finds an active instance by target value.
+// target >= 100000: instance ID (find specific instance)
+// target >= 0 && target < 100000: object index (find first instance of that object, checking parent chains)
+static Instance* findInstanceByTarget(VMContext* ctx, int32_t target) {
     Runner* runner = (Runner*) ctx->runner;
     int32_t instanceCount = (int32_t) arrlen(runner->instances);
+
+    if (target >= 100000) {
+        // Instance ID - find specific instance
+        for (int32_t i = 0; instanceCount > i; i++) {
+            Instance* inst = runner->instances[i];
+            if (inst->active && (int32_t) inst->instanceId == target) return inst;
+        }
+        return nullptr;
+    }
+
+    // Object index - find first matching instance, checking parent chains
     for (int32_t i = 0; instanceCount > i; i++) {
         Instance* inst = runner->instances[i];
-        if (inst->objectIndex == objectIndex && inst->active) return inst;
+        if (inst->active && VM_isObjectOrDescendant(ctx->dataWin, inst->objectIndex, target)) return inst;
     }
     return nullptr;
 }
 
-static RValue resolveVariableRead(VMContext* ctx, int16_t instanceType, uint32_t varRef) {
+static RValue resolveVariableRead(VMContext* ctx, int32_t instanceType, uint32_t varRef) {
     Variable* varDef = resolveVarDef(ctx, varRef);
 
     ArrayAccess access = popArrayAccess(ctx, varRef);
 
-    // Use instance type from stack when available (VARTYPE_ARRAY pushes it)
-    int16_t originalInstanceType = instanceType;
+    // Use instance type from stack when available (VARTYPE_ARRAY / VARTYPE_STACKTOP)
+    int32_t originalInstanceType = instanceType;
     if (access.hasInstanceType) {
         instanceType = access.instanceType;
     }
 
-    // Resolve target instance for object references (instanceType >= 0)
+    // Resolve target instance for object/instance references (instanceType >= 0)
     Instance* targetInstance = (Instance*) ctx->currentInstance;
     if (instanceType >= 0) {
-        targetInstance = findInstanceByObjectIndex(ctx, instanceType);
+        targetInstance = findInstanceByTarget(ctx, instanceType);
         if (targetInstance == nullptr) {
-            GameObject* gameObject = &ctx->dataWin->objt.objects[instanceType];
-            fprintf(stderr, "VM: [%s] READ var '%s' on object index %d (%s) but no instance found\n", ctx->currentCodeName, varDef->name, instanceType, gameObject->name);
+            if (instanceType < 100000 && (uint32_t) instanceType < ctx->dataWin->objt.count) {
+                GameObject* gameObject = &ctx->dataWin->objt.objects[instanceType];
+                fprintf(stderr, "VM: [%s] READ var '%s' on object index %d (%s) but no instance found\n", ctx->currentCodeName, varDef->name, instanceType, gameObject->name);
+            } else {
+                fprintf(stderr, "VM: [%s] READ var '%s' on instance %d but no instance found\n", ctx->currentCodeName, varDef->name, instanceType);
+            }
             return RValue_makeReal(0.0);
         }
     }
 
     // Check for built-in variable (varID == -6 sentinel)
     if (varDef->varID == -6) {
-        // For object references, temporarily swap currentInstance so VMBuiltins reads the correct instance
+        // For object/instance references, temporarily swap currentInstance so VMBuiltins reads the correct instance
         Instance* savedInstance = (Instance*) ctx->currentInstance;
         if (instanceType >= 0) ctx->currentInstance = targetInstance;
         RValue result = VMBuiltins_getVariable(ctx, varDef->name, access.arrayIndex);
@@ -476,31 +493,35 @@ static RValue resolveVariableRead(VMContext* ctx, int16_t instanceType, uint32_t
     return result;
 }
 
-static void resolveVariableWrite(VMContext* ctx, int16_t instanceType, uint32_t varRef, RValue val) {
+static void resolveVariableWrite(VMContext* ctx, int32_t instanceType, uint32_t varRef, RValue val) {
     Variable* varDef = resolveVarDef(ctx, varRef);
 
     ArrayAccess access = popArrayAccess(ctx, varRef);
 
-    // Use instance type from stack when available (VARTYPE_ARRAY pushes it)
-    int16_t originalInstanceType = instanceType;
+    // Use instance type from stack when available (VARTYPE_ARRAY / VARTYPE_STACKTOP)
+    int32_t originalInstanceType = instanceType;
     if (access.hasInstanceType) {
         instanceType = access.instanceType;
     }
 
-    // Resolve target instance for object references (instanceType >= 0)
+    // Resolve target instance for object/instance references (instanceType >= 0)
     Instance* targetInstance = (Instance*) ctx->currentInstance;
     if (instanceType >= 0) {
-        targetInstance = findInstanceByObjectIndex(ctx, instanceType);
+        targetInstance = findInstanceByTarget(ctx, instanceType);
         if (targetInstance == nullptr) {
-            GameObject* gameObject = &ctx->dataWin->objt.objects[instanceType];
-            fprintf(stderr, "VM: [%s] WRITE var '%s' on object index %d (%s) but no instance found\n", ctx->currentCodeName, varDef->name, instanceType, gameObject->name);
+            if (instanceType < 100000 && (uint32_t) instanceType < ctx->dataWin->objt.count) {
+                GameObject* gameObject = &ctx->dataWin->objt.objects[instanceType];
+                fprintf(stderr, "VM: [%s] WRITE var '%s' on object index %d (%s) but no instance found\n", ctx->currentCodeName, varDef->name, instanceType, gameObject->name);
+            } else {
+                fprintf(stderr, "VM: [%s] WRITE var '%s' on instance %d but no instance found\n", ctx->currentCodeName, varDef->name, instanceType);
+            }
             return;
         }
     }
 
     // Check for built-in variable (varID == -6 sentinel)
     if (varDef->varID == -6) {
-        // For object references, temporarily swap currentInstance so VMBuiltins writes the correct instance
+        // For object/instance references, temporarily swap currentInstance so VMBuiltins writes the correct instance
         Instance* savedInstance = (Instance*) ctx->currentInstance;
         if (instanceType >= 0) ctx->currentInstance = targetInstance;
         VMBuiltins_setVariable(ctx, varDef->name, val, access.arrayIndex);
@@ -661,7 +682,7 @@ static void handlePush(VMContext* ctx, uint32_t instr, const uint8_t* extraData)
             stackPush(ctx,RValue_makeBool(readInt32(extraData) != 0));
             break;
         case GML_TYPE_VARIABLE: {
-            int16_t instanceType = instrInstanceType(instr);
+            int32_t instanceType = (int32_t) instrInstanceType(instr);
             uint32_t varRef = resolveVarOperand(ctx, extraData);
             RValue val = resolveVariableRead(ctx, instanceType, varRef);
             stackPush(ctx,val);
@@ -737,16 +758,16 @@ static void handlePushI(VMContext* ctx, uint32_t instr) {
 }
 
 static void handlePop(VMContext* ctx, uint32_t instr, const uint8_t* extraData) {
-    int16_t instanceType = instrInstanceType(instr);
+    int32_t instanceType = (int32_t) instrInstanceType(instr);
     uint8_t type1 = instrType1(instr);   // destination type
     uint8_t type2 = instrType2(instr);   // source type (what's on stack)
     uint32_t varRef = resolveVarOperand(ctx, extraData);
-    uint8_t varType = (varRef >> 24) & 0xFF;
+    uint8_t varType = (varRef >> 24) & 0xF8;
 
     RValue val;
     int32_t arrayIndex = -1;
 
-    int16_t originalInstanceType = instanceType;
+    int32_t originalInstanceType = instanceType;
     if (varType == VARTYPE_ARRAY) {
         // For array writes, GMS pushes: value, instanceType, arrayIndex (arrayIndex on top)
         RValue arrayIdxVal = stackPop(ctx);
@@ -754,7 +775,7 @@ static void handlePop(VMContext* ctx, uint32_t instr, const uint8_t* extraData) 
         RValue_free(&arrayIdxVal);
 
         RValue instTypeVal = stackPop(ctx);
-        instanceType = (int16_t) RValue_toInt32(instTypeVal);
+        instanceType = RValue_toInt32(instTypeVal);
         RValue_free(&instTypeVal);
 
         val = stackPop(ctx);
@@ -796,6 +817,17 @@ static void handlePop(VMContext* ctx, uint32_t instr, const uint8_t* extraData) 
                 case INSTANCE_SELF:
                 default: {
                     struct Instance* inst = (struct Instance*) ctx->currentInstance;
+                    if (instanceType >= 0) {
+                        inst = findInstanceByTarget(ctx, instanceType);
+                        if (inst == nullptr) {
+                            if (instanceType < 100000 && (uint32_t) instanceType < ctx->dataWin->objt.count) {
+                                fprintf(stderr, "VM: [%s] WRITE array var '%s[%d]' on object index %d (%s) but no instance found\n", ctx->currentCodeName, varDef->name, arrayIndex, instanceType, ctx->dataWin->objt.objects[instanceType].name);
+                            } else {
+                                fprintf(stderr, "VM: [%s] WRITE array var '%s[%d]' on instance %d but no instance found\n", ctx->currentCodeName, varDef->name, arrayIndex, instanceType);
+                            }
+                            break;
+                        }
+                    }
                     if (inst != nullptr) {
                         int32_t resolvedVarID = resolveArrayAlias(inst->selfVars, inst->selfVarCount, varDef->varID);
                         arrayMapSet(&inst->selfArrayMap, resolvedVarID, arrayIndex, val);
