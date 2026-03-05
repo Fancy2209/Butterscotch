@@ -426,7 +426,9 @@ static RValue resolveVariableRead(VMContext* ctx, int32_t instanceType, uint32_t
                     }
                     return result;
                 }
-                fprintf(stderr, "VM: Array read on self var '%s' but no current instance (instanceType=%d)\n", varDef->name, instanceType);
+                uint8_t varType = (varRef >> 24) & 0xF8;
+                const char* varTypeName = varType == VARTYPE_ARRAY ? "ARRAY" : varType == VARTYPE_STACKTOP ? "STACKTOP" : varType == VARTYPE_NORMAL ? "NORMAL" : varType == VARTYPE_INSTANCE ? "INSTANCE" : "UNKNOWN";
+                fprintf(stderr, "VM: [%s] Array read on self var '%s' but no current instance (instanceType=%d, varType=%s, isArray=%s, originalInstanceType=%d, hasInstanceType=%s, varID=%d)\n", ctx->currentCodeName, varDef->name, instanceType, varTypeName, access.isArray ? "true" : "false", originalInstanceType, access.hasInstanceType ? "true" : "false", varDef->varID);
                 return RValue_makeReal(0.0);
             }
         }
@@ -574,7 +576,11 @@ static void resolveVariableWrite(VMContext* ctx, int32_t instanceType, uint32_t 
                     }
                     return;
                 }
-                fprintf(stderr, "VM: Array write on self var '%s' but no current instance (instanceType=%d)\n", varDef->name, instanceType);
+                uint8_t varType = (varRef >> 24) & 0xF8;
+                const char* varTypeName = varType == VARTYPE_ARRAY ? "ARRAY" : varType == VARTYPE_STACKTOP ? "STACKTOP" : varType == VARTYPE_NORMAL ? "NORMAL" : varType == VARTYPE_INSTANCE ? "INSTANCE" : "UNKNOWN";
+                char* valAsString = RValue_toString(val);
+                fprintf(stderr, "VM: [%s] Array write on self var '%s' but no current instance (instanceType=%d, varType=%s, isArray=%s, originalInstanceType=%d, hasInstanceType=%s, varID=%d, value=%s)\n", ctx->currentCodeName, varDef->name, instanceType, varTypeName, access.isArray ? "true" : "false", originalInstanceType, access.hasInstanceType ? "true" : "false", varDef->varID, valAsString);
+                free(valAsString);
                 return;
             }
         }
@@ -826,11 +832,14 @@ static void handlePop(VMContext* ctx, uint32_t instr, const uint8_t* extraData) 
                     if (instanceType >= 0) {
                         inst = findInstanceByTarget(ctx, instanceType);
                         if (inst == nullptr) {
+                            const char* varTypeName = varType == VARTYPE_ARRAY ? "ARRAY" : varType == VARTYPE_STACKTOP ? "STACKTOP" : varType == VARTYPE_NORMAL ? "NORMAL" : varType == VARTYPE_INSTANCE ? "INSTANCE" : "UNKNOWN";
+                            char* valAsString = RValue_toString(val);
                             if (instanceType < 100000 && (uint32_t) instanceType < ctx->dataWin->objt.count) {
-                                fprintf(stderr, "VM: [%s] WRITE array var '%s[%d]' on object index %d (%s) but no instance found\n", ctx->currentCodeName, varDef->name, arrayIndex, instanceType, ctx->dataWin->objt.objects[instanceType].name);
+                                fprintf(stderr, "VM: [%s] WRITE array var '%s[%d]' on object index %d (%s) but no instance found (varType=%s, originalInstanceType=%d, varID=%d, value=%s)\n", ctx->currentCodeName, varDef->name, arrayIndex, instanceType, ctx->dataWin->objt.objects[instanceType].name, varTypeName, originalInstanceType, varDef->varID, valAsString);
                             } else {
-                                fprintf(stderr, "VM: [%s] WRITE array var '%s[%d]' on instance %d but no instance found\n", ctx->currentCodeName, varDef->name, arrayIndex, instanceType);
+                                fprintf(stderr, "VM: [%s] WRITE array var '%s[%d]' on instance %d but no instance found (varType=%s, originalInstanceType=%d, varID=%d, value=%s)\n", ctx->currentCodeName, varDef->name, arrayIndex, instanceType, varTypeName, originalInstanceType, varDef->varID, valAsString);
                             }
+                            free(valAsString);
                             break;
                         }
                     }
