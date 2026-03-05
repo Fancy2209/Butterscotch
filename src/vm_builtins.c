@@ -2099,7 +2099,116 @@ STUB_RETURN_ZERO(display_get_height)
 
 // Collision stubs
 STUB_RETURN_ZERO(place_meeting)
-STUB_RETURN_ZERO(collision_line)
+// collision_line(x1, y1, x2, y2, obj, prec, notme)
+static RValue builtinCollisionLine(VMContext* ctx, RValue* args, int32_t argCount) {
+    if (7 > argCount) return RValue_makeReal((double) INSTANCE_NOONE);
+
+    Runner* runner = (Runner*) ctx->runner;
+    if (runner == nullptr) return RValue_makeReal((double) INSTANCE_NOONE);
+
+    double lx1 = RValue_toReal(args[0]);
+    double ly1 = RValue_toReal(args[1]);
+    double lx2 = RValue_toReal(args[2]);
+    double ly2 = RValue_toReal(args[3]);
+    int32_t targetObjIndex = RValue_toInt32(args[4]);
+    int32_t prec = RValue_toInt32(args[5]);
+    int32_t notme = RValue_toInt32(args[6]);
+
+    Instance* self = (Instance*) ctx->currentInstance;
+    int32_t count = (int32_t) arrlen(runner->instances);
+
+    repeat(count, i) {
+        Instance* inst = runner->instances[i];
+        if (!inst->active) continue;
+        if (notme && inst == self) continue;
+        if (!VM_isObjectOrDescendant(ctx->dataWin, inst->objectIndex, targetObjIndex)) continue;
+
+        InstanceBBox bbox = Collision_computeBBox(ctx->dataWin, inst);
+        if (!bbox.valid) continue;
+
+        // Fast reject: line's bounding rect vs instance bbox
+        double lineLeft   = fmin(lx1, lx2);
+        double lineRight  = fmax(lx1, lx2);
+        double lineTop    = fmin(ly1, ly2);
+        double lineBottom = fmax(ly1, ly2);
+        if (bbox.left > lineRight || lineLeft > bbox.right || bbox.top > lineBottom || lineTop > bbox.bottom) continue;
+
+        // Normalize line left-to-right for clipping
+        double xl = lx1, yl = ly1, xr = lx2, yr = ly2;
+        if (xl > xr) { double tmp = xl; xl = xr; xr = tmp; tmp = yl; yl = yr; yr = tmp; }
+
+        double dx = xr - xl;
+        double dy = yr - yl;
+
+        // Clip line to bbox horizontally
+        if (fabs(dx) > 0.0001) {
+            if (bbox.left > xl) {
+                double t = (bbox.left - xl) / dx;
+                xl = bbox.left;
+                yl = yl + t * dy;
+            }
+            if (xr > bbox.right) {
+                double t = (bbox.right - xl) / (xr - xl);
+                yr = yl + t * (yr - yl);
+                xr = bbox.right;
+            }
+        }
+
+        // Y-bounds check after horizontal clipping
+        double clippedTop    = fmin(yl, yr);
+        double clippedBottom = fmax(yl, yr);
+        if (bbox.top > clippedBottom || clippedTop > bbox.bottom) continue;
+
+        // Bbox-only mode: collision confirmed
+        if (prec == 0) {
+            return RValue_makeReal((double) inst->instanceId);
+        }
+
+        // Precise mode: walk line pixel-by-pixel within bbox
+        Sprite* spr = Collision_getSprite(ctx->dataWin, inst);
+        if (spr == nullptr || spr->sepMasks != 1 || spr->masks == nullptr || spr->maskCount == 0) {
+            // No precise mask available, treat as bbox hit
+            return RValue_makeReal((double) inst->instanceId);
+        }
+
+        // Recompute dx/dy for the clipped segment
+        double cdx = xr - xl;
+        double cdy = yr - yl;
+        bool found = false;
+
+        if (fabs(cdy) >= fabs(cdx)) {
+            // Vertical-major: normalize top-to-bottom
+            double xt = xl, yt = yl, xb = xr, yb = yr;
+            if (yt > yb) { double tmp = xt; xt = xb; xb = tmp; tmp = yt; yt = yb; yb = tmp; }
+            double vdx = xb - xt;
+            double vdy = yb - yt;
+
+            int32_t startY = (int32_t) fmax(bbox.top, yt);
+            int32_t endY   = (int32_t) fmin(bbox.bottom, yb);
+            for (int32_t py = startY; endY >= py && !found; py++) {
+                double px = (fabs(vdy) > 0.0001) ? xt + ((double) py - yt) * vdx / vdy : xt;
+                if (Collision_pointInMask(spr, inst, px + 0.5, (double) py + 0.5)) {
+                    found = true;
+                }
+            }
+        } else {
+            // Horizontal-major
+            int32_t startX = (int32_t) fmax(bbox.left, xl);
+            int32_t endX   = (int32_t) fmin(bbox.right, xr);
+            for (int32_t px = startX; endX >= px && !found; px++) {
+                double py = (fabs(cdx) > 0.0001) ? yl + ((double) px - xl) * cdy / cdx : yl;
+                if (Collision_pointInMask(spr, inst, (double) px + 0.5, py + 0.5)) {
+                    found = true;
+                }
+            }
+        }
+
+        if (!found) continue;
+        return RValue_makeReal((double) inst->instanceId);
+    }
+
+    return RValue_makeReal((double) INSTANCE_NOONE);
+}
 
 // collision_rectangle(x1, y1, x2, y2, obj, prec, notme)
 static RValue builtinCollisionRectangle(VMContext* ctx, RValue* args, int32_t argCount) {
@@ -2655,7 +2764,7 @@ void VMBuiltins_registerAll(void) {
     // Collision
     registerBuiltin("place_meeting", builtin_place_meeting);
     registerBuiltin("collision_rectangle", builtinCollisionRectangle);
-    registerBuiltin("collision_line", builtin_collision_line);
+    registerBuiltin("collision_line", builtinCollisionLine);
     registerBuiltin("collision_point", builtinCollisionPoint);
     registerBuiltin("instance_position", builtinInstancePosition);
 
