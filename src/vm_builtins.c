@@ -1412,6 +1412,19 @@ static RValue builtinEventUser(VMContext* ctx, RValue* args, int32_t argCount) {
     return RValue_makeReal(0.0);
 }
 
+static RValue builtinEventPerform(VMContext* ctx, RValue* args, int32_t argCount) {
+    if (2 > argCount) return RValue_makeReal(0.0);
+    Runner* runner = (Runner*) ctx->runner;
+    Instance* inst = (Instance*) ctx->currentInstance;
+    if (inst == nullptr) return RValue_makeReal(0.0);
+
+    int32_t eventType = RValue_toInt32(args[0]);
+    int32_t eventSubtype = RValue_toInt32(args[1]);
+
+    Runner_executeEvent(runner, inst, eventType, eventSubtype);
+    return RValue_makeReal(0.0);
+}
+
 static RValue builtinActionKillObject(VMContext* ctx, [[maybe_unused]] RValue* args, [[maybe_unused]] int32_t argCount) {
     Runner* runner = (Runner*) ctx->runner;
     if (ctx->currentInstance != nullptr) {
@@ -2240,6 +2253,7 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("action_kill_object", builtinActionKillObject);
     registerBuiltin("event_inherited", builtinEventInherited);
     registerBuiltin("event_user", builtinEventUser);
+    registerBuiltin("event_perform", builtinEventPerform);
 
     // Buffer
     registerBuiltin("buffer_create", builtin_buffer_create);
