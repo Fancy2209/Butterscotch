@@ -1627,6 +1627,44 @@ static RValue builtinInstanceCreate(VMContext* ctx, RValue* args, int32_t argCou
     return RValue_makeReal((double) inst->instanceId);
 }
 
+static RValue builtinInstanceChange(VMContext* ctx, RValue* args, int32_t argCount) {
+    if (2 > argCount) return RValue_makeUndefined();
+    Runner* runner = (Runner*) ctx->runner;
+    Instance* inst = (Instance*) ctx->currentInstance;
+    if (inst == nullptr) return RValue_makeUndefined();
+
+    int32_t objectIndex = RValue_toInt32(args[0]);
+    bool performEvents = RValue_toBool(args[1]);
+
+    if (0 > objectIndex || (uint32_t) objectIndex >= runner->dataWin->objt.count) {
+        fprintf(stderr, "VM: instance_change: objectIndex %d out of range\n", objectIndex);
+        return RValue_makeUndefined();
+    }
+
+    // Fire destroy event on old object if requested
+    if (performEvents) {
+        Runner_executeEvent(runner, inst, EVENT_DESTROY, 0);
+    }
+
+    // Change object index and copy properties from new object definition
+    GameObject* newObjDef = &runner->dataWin->objt.objects[objectIndex];
+    inst->objectIndex = objectIndex;
+    inst->spriteIndex = newObjDef->spriteId;
+    inst->visible = newObjDef->visible;
+    inst->solid = newObjDef->solid;
+    inst->persistent = newObjDef->persistent;
+    inst->depth = newObjDef->depth;
+    inst->maskIndex = newObjDef->textureMaskId;
+    inst->imageIndex = 0.0;
+
+    // Fire create event on new object if requested
+    if (performEvents) {
+        Runner_executeEvent(runner, inst, EVENT_CREATE, 0);
+    }
+
+    return RValue_makeUndefined();
+}
+
 static RValue builtinEventInherited(VMContext* ctx, [[maybe_unused]] RValue* args, [[maybe_unused]] int32_t argCount) {
     Runner* runner = (Runner*) ctx->runner;
     Instance* inst = (Instance*) ctx->currentInstance;
@@ -2948,6 +2986,7 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("instance_find", builtinInstanceFind);
     registerBuiltin("instance_destroy", builtinInstanceDestroy);
     registerBuiltin("instance_create", builtinInstanceCreate);
+    registerBuiltin("instance_change", builtinInstanceChange);
     registerBuiltin("action_kill_object", builtinActionKillObject);
     registerBuiltin("action_create_object", builtinActionCreateObject);
     registerBuiltin("action_set_relative", builtinActionSetRelative);
