@@ -7,9 +7,24 @@
 typedef struct {
     FILE* file;
     size_t fileSize;
+
+    // When non-null, reads come from this memory buffer instead of the FILE*
+    // bufferBase is the absolute file offset that buffer[0] corresponds to
+    uint8_t* buffer;
+    size_t bufferBase;
+    size_t bufferSize;
+    size_t bufferPos; // current read position relative to bufferBase
 } BinaryReader;
 
 BinaryReader BinaryReader_create(FILE* file, size_t fileSize);
+
+// Sets a memory buffer for bulk chunk reading
+// All subsequent reads will come from this buffer until it is cleared
+// baseOffset is the absolute file offset that buffer[0] corresponds to
+void BinaryReader_setBuffer(BinaryReader* reader, uint8_t* buffer, size_t baseOffset, size_t size);
+
+// Clears the memory buffer, reverting to FILE*-based reads
+void BinaryReader_clearBuffer(BinaryReader* reader);
 
 uint8_t BinaryReader_readUint8(BinaryReader* reader);
 int16_t BinaryReader_readInt16(BinaryReader* reader);
