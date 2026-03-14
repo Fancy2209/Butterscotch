@@ -581,40 +581,6 @@ static void gsDrawSprite(Renderer* renderer, int32_t tpagIndex, float x, float y
     if (0 > tpagIndex || (uint32_t) tpagIndex >= dw->tpag.count) return;
 
     TexturePageItem* tpag = &dw->tpag.items[tpagIndex];
-
-    // Set up GSTEXTURE for this TPAG entry
-    GSTEXTURE tex;
-    if (!setupTextureForTPAG(gs, &tex, tpagIndex)) {
-        // Fallback: draw colored rectangle if no atlas mapping
-        float w = (float) tpag->boundingWidth;
-        float h = (float) tpag->boundingHeight;
-        float gameX1 = x - originX * xscale;
-        float gameY1 = y - originY * yscale;
-        float gameX2 = x + (w - originX) * xscale;
-        float gameY2 = y + (h - originY) * yscale;
-
-        float sx1 = (gameX1 - (float) gs->viewX) * gs->scaleX + gs->offsetX;
-        float sy1 = (gameY1 - (float) gs->viewY) * gs->scaleY + gs->offsetY;
-        float sx2 = (gameX2 - (float) gs->viewX) * gs->scaleX + gs->offsetX;
-        float sy2 = (gameY2 - (float) gs->viewY) * gs->scaleY + gs->offsetY;
-
-        uint8_t r = BGR_R(color);
-        uint8_t g = BGR_G(color);
-        uint8_t b = BGR_B(color);
-        uint8_t a = (uint8_t) (alpha * 128.0f);
-        gsKit_prim_sprite(gs->gsGlobal, sx1, sy1, sx2, sy2, gs->zCounter, GS_SETREG_RGBAQ(r, g, b, a, 0x00));
-        gs->zCounter++;
-        return;
-    }
-
-    AtlasTPAGEntry* atlasEntry = &gs->atlasTPAGEntries[tpagIndex];
-
-    // The atlas entry has the actual sprite dimensions in the atlas
-    // The TPAG has the original bounding dimensions
-    // If downscaled, the GS hardware rescales because we draw boundW x boundH but
-    // sample from atlasW x atlasH texels
-    float atlasW = (float) atlasEntry->width;
-    float atlasH = (float) atlasEntry->height;
     float boundW = (float) tpag->boundingWidth;
     float boundH = (float) tpag->boundingHeight;
 
@@ -630,11 +596,39 @@ static void gsDrawSprite(Renderer* renderer, int32_t tpagIndex, float x, float y
     float sx2 = (gameX2 - (float) gs->viewX) * gs->scaleX + gs->offsetX;
     float sy2 = (gameY2 - (float) gs->viewY) * gs->scaleY + gs->offsetY;
 
+    // View frustum culling: skip if entirely off-screen (handles negative scales via min/max)
+    float minSX = (sx1 < sx2) ? sx1 : sx2;
+    float maxSX = (sx1 > sx2) ? sx1 : sx2;
+    float minSY = (sy1 < sy2) ? sy1 : sy2;
+    float maxSY = (sy1 > sy2) ? sy1 : sy2;
+    if (maxSX < 0.0f || minSX > PS2_SCREEN_WIDTH || maxSY < 0.0f || minSY > PS2_SCREEN_HEIGHT)
+        return;
+
+    // Set up GSTEXTURE for this TPAG entry
+    GSTEXTURE tex;
+    if (!setupTextureForTPAG(gs, &tex, tpagIndex)) {
+        // Fallback: draw colored rectangle if no atlas mapping
+        uint8_t r = BGR_R(color);
+        uint8_t g = BGR_G(color);
+        uint8_t b = BGR_B(color);
+        uint8_t a = (uint8_t) (alpha * 128.0f);
+        gsKit_prim_sprite(gs->gsGlobal, sx1, sy1, sx2, sy2, gs->zCounter, GS_SETREG_RGBAQ(r, g, b, a, 0x00));
+        gs->zCounter++;
+        return;
+    }
+
+    AtlasTPAGEntry* atlasEntry = &gs->atlasTPAGEntries[tpagIndex];
+
+    // The atlas entry has the actual sprite dimensions in the atlas
+    // The TPAG has the original bounding dimensions
+    // If downscaled, the GS hardware rescales because we draw boundW x boundH but
+    // sample from atlasW x atlasH texels
+
     // UV coords within the 512x512 atlas (in texels for gsKit)
     float u1 = (float) atlasEntry->atlasX;
     float v1 = (float) atlasEntry->atlasY;
-    float u2 = u1 + atlasW;
-    float v2 = v1 + atlasH;
+    float u2 = u1 + (float) atlasEntry->width;
+    float v2 = v1 + (float) atlasEntry->height;
 
     // GS modulate mode: Output = Texture * Vertex / 128
     // Scale vertex RGB from 0-255 to 0-128 so white (255) becomes 128 (1.0x multiplier)
@@ -653,20 +647,28 @@ static void gsDrawSpritePart(Renderer* renderer, int32_t tpagIndex, int32_t srcO
 
     if (0 > tpagIndex || (uint32_t) tpagIndex >= renderer->dataWin->tpag.count) return;
 
+    // Compute screen position
+    float gameX1 = x - (float) gs->viewX;
+    float gameY1 = y - (float) gs->viewY;
+    float gameX2 = gameX1 + (float) srcW * xscale;
+    float gameY2 = gameY1 + (float) srcH * yscale;
+
+    float sx1 = gameX1 * gs->scaleX + gs->offsetX;
+    float sy1 = gameY1 * gs->scaleY + gs->offsetY;
+    float sx2 = gameX2 * gs->scaleX + gs->offsetX;
+    float sy2 = gameY2 * gs->scaleY + gs->offsetY;
+
+    // View frustum culling: skip if entirely off-screen (handles negative scales via min/max)
+    float minSX = (sx1 < sx2) ? sx1 : sx2;
+    float maxSX = (sx1 > sx2) ? sx1 : sx2;
+    float minSY = (sy1 < sy2) ? sy1 : sy2;
+    float maxSY = (sy1 > sy2) ? sy1 : sy2;
+    if (maxSX < 0.0f || minSX > PS2_SCREEN_WIDTH || maxSY < 0.0f || minSY > PS2_SCREEN_HEIGHT) return;
+
     // Set up GSTEXTURE for this TPAG entry
     GSTEXTURE tex;
     if (!setupTextureForTPAG(gs, &tex, tpagIndex)) {
         // Fallback: draw colored rectangle
-        float gameX1 = x - (float) gs->viewX;
-        float gameY1 = y - (float) gs->viewY;
-        float gameX2 = gameX1 + (float) srcW * xscale;
-        float gameY2 = gameY1 + (float) srcH * yscale;
-
-        float sx1 = gameX1 * gs->scaleX + gs->offsetX;
-        float sy1 = gameY1 * gs->scaleY + gs->offsetY;
-        float sx2 = gameX2 * gs->scaleX + gs->offsetX;
-        float sy2 = gameY2 * gs->scaleY + gs->offsetY;
-
         uint8_t r = BGR_R(color);
         uint8_t g = BGR_G(color);
         uint8_t b = BGR_B(color);
@@ -681,12 +683,10 @@ static void gsDrawSpritePart(Renderer* renderer, int32_t tpagIndex, int32_t srcO
 
     // Compute the ratio between atlas size and original TPAG size
     // (in case the preprocessor downscaled)
-    float atlasW = (float) atlasEntry->width;
-    float atlasH = (float) atlasEntry->height;
     float origW = (float) tpag->sourceWidth;
     float origH = (float) tpag->sourceHeight;
-    float ratioX = (origW > 0) ? (atlasW / origW) : 1.0f;
-    float ratioY = (origH > 0) ? (atlasH / origH) : 1.0f;
+    float ratioX = (origW > 0) ? ((float) atlasEntry->width / origW) : 1.0f;
+    float ratioY = (origH > 0) ? ((float) atlasEntry->height / origH) : 1.0f;
 
     // Map srcOffX/Y/W/H from original TPAG space to atlas space
     float atlasOffX = (float) srcOffX * ratioX;
@@ -699,17 +699,6 @@ static void gsDrawSpritePart(Renderer* renderer, int32_t tpagIndex, int32_t srcO
     float v1 = (float) atlasEntry->atlasY + atlasOffY;
     float u2 = u1 + atlasSrcW;
     float v2 = v1 + atlasSrcH;
-
-    // Screen position (draw_sprite_part uses original dimensions for display)
-    float gameX1 = x - (float) gs->viewX;
-    float gameY1 = y - (float) gs->viewY;
-    float gameX2 = gameX1 + (float) srcW * xscale;
-    float gameY2 = gameY1 + (float) srcH * yscale;
-
-    float sx1 = gameX1 * gs->scaleX + gs->offsetX;
-    float sy1 = gameY1 * gs->scaleY + gs->offsetY;
-    float sx2 = gameX2 * gs->scaleX + gs->offsetX;
-    float sy2 = gameY2 * gs->scaleY + gs->offsetY;
 
     // GS modulate mode: Output = Texture * Vertex / 128
     uint8_t r = BGR_R(color) >> 1;
