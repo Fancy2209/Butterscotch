@@ -70,12 +70,16 @@ typedef struct {
     uint32_t clut8Count;       // Number of 8bpp CLUTs
     uint32_t* clut8VramAddrs;  // Per-CLUT VRAM addresses [clut8Count]
 
+    // TEXTURES.BIN file handle (kept open for on-demand atlas loading)
+    FILE* texturesFile;
+    uint32_t* atlasOffsets;    // Byte offset of each atlas within TEXTURES.BIN [atlasCount]
+
     // VRAM texture cache (buddy system with LRU eviction)
     uint32_t textureVramBase;  // Start of texture region in VRAM (after framebuffers + CLUTs)
     uint32_t chunkCount;       // Number of 128KB chunks available
     VRAMChunk* chunks;         // Per-chunk state [chunkCount]
     int16_t* atlasToChunk;     // atlasId -> first chunk index (-1 = not loaded) [atlasCount]
-    uint16_t atlasCount;       // Number of atlas IDs (maxAtlasId + 1)
+    uint16_t atlasCount;       // Number of atlas IDs from ATLAS.BIN header
     uint8_t* atlasBpp;         // Bits per pixel per atlas (4 or 8), from ATLAS.BIN [atlasCount]
     uint64_t frameCounter;     // Incremented each frame for LRU tracking
 } GsRenderer;

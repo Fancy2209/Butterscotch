@@ -88,6 +88,13 @@ static void loadAtlas(GsRenderer* gs) {
 
     gs->atlasTPAGCount = BinaryReader_readUint16(&reader);
     gs->atlasTileCount = BinaryReader_readUint16(&reader);
+    gs->atlasCount = BinaryReader_readUint16(&reader);
+
+    // Parse atlas offset table
+    gs->atlasOffsets = safeMalloc(gs->atlasCount * sizeof(uint32_t));
+    repeat(gs->atlasCount, i) {
+        gs->atlasOffsets[i] = BinaryReader_readUint32(&reader);
+    }
 
     // Parse TPAG entries
     gs->atlasTPAGEntries = safeMalloc(gs->atlasTPAGCount * sizeof(AtlasTPAGEntry));
@@ -124,22 +131,6 @@ static void loadAtlas(GsRenderer* gs) {
 
     fclose(f);
 
-    // Determine atlas count (find max atlasId across both TPAG and tile entries)
-    uint16_t maxAtlasId = 0;
-    repeat(gs->atlasTPAGCount, i) {
-        AtlasTPAGEntry* entry = &gs->atlasTPAGEntries[i];
-        if (entry->atlasId != 0xFFFF && entry->atlasId > maxAtlasId) {
-            maxAtlasId = entry->atlasId;
-        }
-    }
-    repeat(gs->atlasTileCount, i) {
-        AtlasTileEntry* entry = &gs->atlasTileEntries[i];
-        if (entry->atlasId != 0xFFFF && entry->atlasId > maxAtlasId) {
-            maxAtlasId = entry->atlasId;
-        }
-    }
-
-    gs->atlasCount = maxAtlasId + 1;
     gs->atlasBpp = safeCalloc(gs->atlasCount, sizeof(uint8_t));
     gs->atlasToChunk = safeMalloc(gs->atlasCount * sizeof(int16_t));
     repeat(gs->atlasCount, i) {
@@ -384,43 +375,52 @@ static int32_t allocateChunks(GsRenderer* gs, int chunksNeeded) {
     return -1;
 }
 
-// Upload atlas pixel data from TEX file to the given VRAM chunk(s).
+// Upload atlas pixel data from TEXTURES.BIN to the given VRAM chunk(s).
 static void uploadAtlasToChunk(GsRenderer* gs, uint16_t atlasId, int32_t firstChunk) {
-    char path[64];
-    snprintf(path, sizeof(path), "TEX%u.BIN", atlasId);
+    uint32_t fileOffset = gs->atlasOffsets[atlasId];
 
-    uint32_t fileSize;
-    uint8_t* data = loadFileRaw(path, &fileSize);
+    // Seek to the atlas header within TEXTURES.BIN
+    fseek(gs->texturesFile, (long) fileOffset, SEEK_SET);
 
-    if (TEX_HEADER_SIZE > fileSize) {
-        fprintf(stderr, "GsRenderer: %s too small for header (%u bytes)\n", path, fileSize);
+    // Read the 128-byte header
+    uint8_t header[TEX_HEADER_SIZE];
+    size_t headerRead = fread(header, 1, TEX_HEADER_SIZE, gs->texturesFile);
+    if (headerRead != TEX_HEADER_SIZE) {
+        fprintf(stderr, "GsRenderer: Failed to read atlas %u header from TEXTURES.BIN at offset 0x%08X\n", atlasId, fileOffset);
         abort();
     }
 
-    uint8_t version = data[0];
+    uint8_t version = header[0];
     if (version != 0) {
-        fprintf(stderr, "GsRenderer: Unsupported TEX version %u in %s\n", version, path);
+        fprintf(stderr, "GsRenderer: Unsupported TEX version %u for atlas %u\n", version, atlasId);
         abort();
     }
 
-    uint16_t width = BinaryUtils_readUint16(data + 1);
-    uint16_t height = BinaryUtils_readUint16(data + 3);
-    uint8_t bpp = BinaryUtils_readUint8(data + 5);
-    uint32_t pixelDataSize = BinaryUtils_readUint32(data + 6);
+    uint16_t width = BinaryUtils_readUint16(header + 1);
+    uint16_t height = BinaryUtils_readUint16(header + 3);
+    uint8_t bpp = BinaryUtils_readUint8(header + 5);
+    uint32_t pixelDataSize = BinaryUtils_readUint32(header + 6);
 
     if (width != ATLAS_WIDTH || height != ATLAS_HEIGHT) {
-        fprintf(stderr, "GsRenderer: %s unexpected dimensions %ux%u (expected %ux%u)\n", path, width, height, ATLAS_WIDTH, ATLAS_HEIGHT);
+        fprintf(stderr, "GsRenderer: Atlas %u unexpected dimensions %ux%u (expected %ux%u)\n", atlasId, width, height, ATLAS_WIDTH, ATLAS_HEIGHT);
         abort();
     }
 
     if (bpp != 4 && bpp != 8) {
-        fprintf(stderr, "GsRenderer: %s unsupported bpp %u\n", path, bpp);
+        fprintf(stderr, "GsRenderer: Atlas %u unsupported bpp %u\n", atlasId, bpp);
         abort();
     }
 
-    uint32_t expectedFileSize = TEX_HEADER_SIZE + pixelDataSize;
-    if (expectedFileSize > fileSize) {
-        fprintf(stderr, "GsRenderer: %s truncated (expected %u, got %u)\n", path, expectedFileSize, fileSize);
+    // Read pixel data (file cursor is already at the right position after the header)
+    uint8_t* pixelData = (uint8_t*) memalign(128, pixelDataSize);
+    if (pixelData == nullptr) {
+        fprintf(stderr, "GsRenderer: Failed to allocate %u bytes for atlas %u pixel data\n", pixelDataSize, atlasId);
+        abort();
+    }
+
+    size_t pixelRead = fread(pixelData, 1, pixelDataSize, gs->texturesFile);
+    if (pixelRead != pixelDataSize) {
+        fprintf(stderr, "GsRenderer: Short read for atlas %u pixel data (expected %u, got %zu)\n", atlasId, pixelDataSize, pixelRead);
         abort();
     }
 
@@ -428,7 +428,6 @@ static void uploadAtlasToChunk(GsRenderer* gs, uint16_t atlasId, int32_t firstCh
     uint8_t psm = (bpp == 4) ? GS_PSM_T4 : GS_PSM_T8;
     uint32_t tbw = ATLAS_WIDTH / 64;
     uint32_t vramAddr = gs->textureVramBase + (uint32_t) firstChunk * VRAM_CHUNK_SIZE;
-    uint8_t* pixelData = data + TEX_HEADER_SIZE;
 
     gsKit_texture_send((u32*) pixelData, ATLAS_WIDTH, ATLAS_HEIGHT, vramAddr, psm, tbw, GS_CLUT_TEXTURE);
 
@@ -440,9 +439,9 @@ static void uploadAtlasToChunk(GsRenderer* gs, uint16_t atlasId, int32_t firstCh
     }
     gs->atlasToChunk[atlasId] = (int16_t) firstChunk;
 
-    fprintf(stderr, "GsRenderer: TEX%u uploaded to chunk %d (VRAM 0x%08X, %ubpp)\n", atlasId, firstChunk, vramAddr, bpp);
+    fprintf(stderr, "GsRenderer: Atlas %u uploaded to chunk %d (VRAM 0x%08X, %ubpp)\n", atlasId, firstChunk, vramAddr, bpp);
 
-    free(data);
+    free(pixelData);
 }
 
 // Ensure an atlas is loaded into VRAM, using LRU eviction if needed.
@@ -610,6 +609,16 @@ static void gsInit(Renderer* renderer, DataWin* dataWin) {
     // Load atlas metadata
     loadAtlas(gs);
 
+    // Open TEXTURES.BIN and keep it open for on-demand atlas loading
+    char* texturesBinPath = PS2Utils_createDevicePath("TEXTURES.BIN");
+    gs->texturesFile = fopen(texturesBinPath, "rb");
+    if (gs->texturesFile == nullptr) {
+        fprintf(stderr, "GsRenderer: Failed to open %s\n", texturesBinPath);
+        abort();
+    }
+    setvbuf(gs->texturesFile, nullptr, _IOFBF, 128 * 1024);
+    free(texturesBinPath);
+
     // Upload CLUTs to VRAM
     loadAndUploadCLUTs(gs);
 
@@ -621,6 +630,10 @@ static void gsInit(Renderer* renderer, DataWin* dataWin) {
 
 static void gsDestroy(Renderer* renderer) {
     GsRenderer* gs = (GsRenderer*) renderer;
+    if (gs->texturesFile != nullptr) {
+        fclose(gs->texturesFile);
+    }
+    free(gs->atlasOffsets);
     free(gs->atlasTPAGEntries);
     free(gs->atlasTileEntries);
     free(gs->chunks);
