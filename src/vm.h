@@ -99,6 +99,7 @@ typedef struct CallFrame {
 // ===[ EnvFrame - Saved context for with-statement (PushEnv/PopEnv) ]===
 typedef struct EnvFrame {
     struct Instance* savedInstance;
+    struct Instance* savedOtherInstance; // Saved otherInstance to restore on PopEnv
     struct Instance** instanceList; // stb_ds array of matching instances (nullptr for single-instance)
     int32_t currentIndex;           // Current position in instanceList
     struct EnvFrame* parent;

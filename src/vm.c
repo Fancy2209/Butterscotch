@@ -1505,6 +1505,7 @@ static void switchToInstance(VMContext* ctx, Instance* inst) {
 // Restores VM context from an EnvFrame's saved fields.
 static void restoreEnvContext(VMContext* ctx, EnvFrame* frame) {
     ctx->currentInstance = frame->savedInstance;
+    ctx->otherInstance = frame->savedOtherInstance;
 }
 
 static void handlePushEnv(VMContext* ctx, uint32_t instr, uint32_t instrAddr) {
@@ -1518,10 +1519,14 @@ static void handlePushEnv(VMContext* ctx, uint32_t instr, uint32_t instrAddr) {
     // Create env frame, save current context
     EnvFrame* frame = safeMalloc(sizeof(EnvFrame));
     frame->savedInstance = (Instance*) ctx->currentInstance;
+    frame->savedOtherInstance = (Instance*) ctx->otherInstance;
     frame->instanceList = nullptr;
     frame->currentIndex = 0;
     frame->parent = ctx->envStack;
     ctx->envStack = frame;
+
+    // Inside a with-block, "other" refers to the instance that executed the with-statement
+    ctx->otherInstance = (Instance*) ctx->currentInstance;
 
     Runner* runner = (Runner*) ctx->runner;
 
