@@ -29,6 +29,7 @@ typedef struct {
     bool parseFunc;
     bool parseStrg;
     bool parseTxtr;
+    bool parseEmbi;
     bool parseAudo;
     // If true, precise masks will be skipped when the sprite does not have a precise state set
     bool skipLoadingPreciseMasksForNonPreciseSprites;
@@ -456,6 +457,7 @@ typedef struct {
     int32_t speedX;
     int32_t speedY;
     int32_t objectId;
+    int32_t cameraID;
 } RoomView;
 
 typedef struct {
@@ -614,6 +616,12 @@ typedef struct {
     Texture* textures;
 } Txtr;
 
+// ===[ EMBI - Embedded Images ]===
+typedef struct {
+    uint32_t count;
+    uint32_t* textureOffsets; // absolute file offsets to TexturePageItems
+} Embi;
+
 // ===[ AUDO - Embedded Audio ]===
 typedef struct {
     uint32_t dataOffset; // absolute file offset to audio data
@@ -659,6 +667,7 @@ typedef struct DataWin {
     Func func;
     Strg strg;
     Txtr txtr;
+    Embi Embi;
     Audo audo;
 
     // Lookup map: absolute file offset -> TPAG index (built during TPAG parsing)

@@ -973,6 +973,7 @@ static void parseROOM(BinaryReader* reader, DataWin* dw) {
                 view->speedX = BinaryReader_readInt32(reader);
                 view->speedY = BinaryReader_readInt32(reader);
                 view->objectId = BinaryReader_readInt32(reader);
+                view->cameraID = -1;
             }
             for (uint32_t j = viewCount; 8 > j; j++) {
                 memset(&room->views[j], 0, sizeof(RoomView));
@@ -1253,6 +1254,26 @@ static void parseTXTR(BinaryReader* reader, DataWin* dw, size_t chunkEnd) {
     }
 }
 
+static void parseEMBI(BinaryReader* reader, DataWin* dw) {
+    Embi* t = &dw->embi;
+
+    uint32_t count;
+    uint32_t version = BinaryReader_readUint32(reader); // always one
+    uint32_t* ptrs = readPointerTable(reader, &count);
+    t->count = count;
+
+    if (count == 0) { free(ptrs); t->items = nullptr; return; }
+
+    if (t->count > 0) {
+        t->textureOffsets = safeMalloc(spr->textureCount * sizeof(uint32_t));
+        repeat(spr->textureCount, j) {
+            t->textureOffsets[j] = BinaryReader_readUint32(reader);
+        }
+    } else {
+        t->textureOffsets = nullptr;
+    }
+}
+
 static void parseAUDO(BinaryReader* reader, DataWin* dw) {
     Audo* a = &dw->audo;
 
@@ -1387,6 +1408,7 @@ DataWin* DataWin_parse(const char* filePath, DataWinParserOptions options) {
             (options.parseFunc && memcmp(chunkName, "FUNC", 4) == 0) ||
             (options.parseStrg && memcmp(chunkName, "STRG", 4) == 0) ||
             (options.parseTxtr && memcmp(chunkName, "TXTR", 4) == 0) ||
+            (options.parseEmbi && memcmp(chunkName, "EMBI", 4) == 0) ||
             (options.parseAudo && memcmp(chunkName, "AUDO", 4) == 0);
 
         // Bulk-read the chunk data into memory for fast parsing
@@ -1447,6 +1469,8 @@ DataWin* DataWin_parse(const char* filePath, DataWinParserOptions options) {
             parseSTRG(&reader, dw);
         } else if (options.parseTxtr && memcmp(chunkName, "TXTR", 4) == 0) {
             parseTXTR(&reader, dw, chunkEnd);
+        } else if (options.parseEmbi && memcmp(chunkName, "EMBI", 4) == 0) {
+            parseEMBI(&reader, dw);
         } else if (options.parseAudo && memcmp(chunkName, "AUDO", 4) == 0) {
             parseAUDO(&reader, dw);
         } else {
@@ -1639,6 +1663,10 @@ void DataWin_free(DataWin* dw) {
         }
         free(dw->txtr.textures);
     }
+
+    // EMBI
+    if(dw->embi.textureOffsets)
+        free(dw->embi.textureOffsets);
 
     // AUDO
     if (dw->audo.entries) {

@@ -377,6 +377,7 @@ int main(int argc, char* argv[]) {
             .parseFunc = true,
             .parseStrg = true,
             .parseTxtr = true,
+            .parseEmbi = true,
             .parseAudo = true,
             .skipLoadingPreciseMasksForNonPreciseSprites = true
         }
