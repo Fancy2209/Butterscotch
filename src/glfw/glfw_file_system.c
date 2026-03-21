@@ -9,6 +9,7 @@
 // ===[ Helpers ]===
 
 static char* buildFullPath(GlfwFileSystem* fs, const char* relativePath) {
+    if(strstr(relativePath, fs->basePath) != NULL) return (char*)relativePath;
     size_t baseLen = strlen(fs->basePath);
     size_t relLen = strlen(relativePath);
     char* fullPath = safeMalloc(baseLen + relLen + 1);

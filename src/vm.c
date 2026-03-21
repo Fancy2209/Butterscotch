@@ -2037,10 +2037,10 @@ RValue VM_callCodeIndex(VMContext* ctx, int32_t codeIndex, RValue* args, int32_t
     ctx->bytecodeBase = saved->savedBytecodeBase;
 
     // Free callee locals
-    repeat(ctx->localVarCount, i) {
-        RValue_free(&ctx->localVars[i]);
-    }
-    free(ctx->localVars);
+    //repeat(ctx->localVarCount, i) {
+    //    RValue_free(&ctx->localVars[i]);
+    //}
+    //free(ctx->localVars);
 
     // Free callee local array map
     RValue_freeAllRValuesInMap(ctx->localArrayMap);
