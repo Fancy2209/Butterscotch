@@ -3654,7 +3654,6 @@ static RValue builtinJsonDecode(VMContext* ctx, [[maybe_unused]] RValue* args, i
     Runner* runner = (Runner*) ctx->runner;
     FileSystem* fs = runner->fileSystem;
     char* content = fs->vtable->readFileText(fs, "lang/lang_en.json");
-    printf("%s\n", content);
     const JsonValue* json = JsonReader_parse(content);
 
     for(int i = 0; i < JsonReader_objectLength(json); i++)
