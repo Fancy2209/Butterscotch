@@ -176,7 +176,7 @@ static int32_t Renderer_resolveSpriteTPAGIndex(DataWin* dataWin, int32_t sprtInd
 
 // Resolves a SPRT or BGND index to a TPAG index
 static int32_t Renderer_resolveObjectTPAGIndex(DataWin* dataWin, RoomTile *tile) {
-    if(tile->useBackgroundDefinition)
+    if(!tile->useSpriteDefinition)
         return Renderer_resolveBackgroundTPAGIndex(dataWin, tile->backgroundDefinition);
     else
         return Renderer_resolveSpriteTPAGIndex(dataWin, tile->backgroundDefinition);
