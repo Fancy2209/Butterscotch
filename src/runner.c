@@ -378,7 +378,7 @@ void Runner_draw(Runner* runner) {
                     bool shouldTrace = shgeti(runner->vmContext->tilesToBeTraced, "*") != -1 || shgeti(runner->vmContext->tilesToBeTraced, bgName) != -1 || shgeti(runner->vmContext->tilesToBeTraced, roomName) != -1;
 
                     if (shouldTrace) {
-                        int32_t tpagIndex = Renderer_resolveObjectTPAGIndex(dataWin, tile);
+                        int32_t tpagIndex = Renderer_resolveBackgroundTPAGIndex(dataWin, tile->backgroundDefinition);
                         if (tpagIndex >= 0) {
                             TexturePageItem* tpag = &dataWin->tpag.items[tpagIndex];
                             fprintf(stderr, "Runner: [%s] Drawing tile #%d bg=%s(%d) tpag(srcX=%d srcY=%d srcW=%d srcH=%d tgtX=%d tgtY=%d bndW=%d bndH=%d page=%d) tile(srcX=%d srcY=%d w=%u h=%u) at pos=(%d,%d) depth=%d\n", roomName, d->tileIndex, bgName, tile->backgroundDefinition, tpag->sourceX, tpag->sourceY, tpag->sourceWidth, tpag->sourceHeight, tpag->targetX, tpag->targetY, tpag->boundingWidth, tpag->boundingHeight, tpag->texturePageId, tile->sourceX, tile->sourceY, tile->width, tile->height, tile->x, tile->y, tile->tileDepth);
