@@ -494,6 +494,7 @@ typedef struct {
 typedef struct {
     int32_t x;
     int32_t y;
+    bool useSpriteDefinition;
     int32_t backgroundDefinition;
     int32_t sourceX;
     int32_t sourceY;
@@ -518,8 +519,24 @@ enum RoomLayerType : uint32_t
 };
 
 typedef struct {
-    uint32_t legacyTilesPtr;
-    uint32_t spritesPtr;
+    const char* name;
+    uint32_t spritePtr;
+    int32_t x;
+    int32_t y;
+    float scaleX;
+    float scaleY;
+    uint32_t color;
+    float animationSpeed;
+    uint32_t animationSpeedType;
+    float frameIndex;
+    float rotation;
+} SpriteInstance;
+
+typedef struct {
+    uint32_t legacyTileCount;
+    RoomTile *legacyTiles;
+    uint32_t spriteCount;
+    SpriteInstance *sprites;
 } RoomLayerAssetsData;
 
 typedef struct {
@@ -735,6 +752,8 @@ typedef struct DataWin {
 
     // Lookup map: absolute file offset -> TPAG index (built during TPAG parsing)
     struct { uint32_t key; int32_t value; }* tpagOffsetMap;
+    // Lookup map: absolute file offset -> SPRT index (built during SPRT parsing)
+    struct { uint32_t key; int32_t value; }* sprtOffsetMap;
 } DataWin;
 
 DataWin* DataWin_parse(const char* filePath, DataWinParserOptions options);
