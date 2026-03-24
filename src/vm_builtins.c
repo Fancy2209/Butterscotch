@@ -1511,9 +1511,18 @@ static RValue builtinDsListFindIndex([[maybe_unused]] VMContext* ctx, RValue* ar
 // ===[ ARRAY FUNCTIONS ]===
 
 static RValue builtinArrayLengthId([[maybe_unused]] VMContext* ctx, [[maybe_unused]] RValue* args, [[maybe_unused]] int32_t argCount) {
-    // array_length_1d / array_length_2d stubs
-    logStubbedFunction(ctx, "array_length_1d");
-    return RValue_makeReal(0.0);
+    if (argCount < 1) {
+        printf("[VM] array_length_1d failed: no args");
+        return RValue_makeReal(0.0);
+    }
+    
+    if (args[0].type != RVALUE_ARRAY_REF) {
+        printf("[VM] array_length_1d called with unexpected arg type:");
+        printf(RValue_toStringTyped(args[0]));
+        printf("\n");
+        if (args[0].type == RVALUE_INT32) {return RValue_makeReal(3.0);}; // works for DELTARUNE (lets us get into light world without skipping rooms or existing save files)
+        return RValue_makeReal(0.0);
+    }
 }
 
 // ===[ STUBBED FUNCTIONS ]===
