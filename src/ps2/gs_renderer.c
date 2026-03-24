@@ -1448,10 +1448,10 @@ static void gsDrawTextColor(Renderer* renderer, const char* text, float x, float
                     float u2 = u1 + (float) glyph->sourceWidth * ratioX;
                     float v2 = v1 + (float) glyph->sourceHeight * ratioY;
                     gsKit_prim_quad_goraud_texture(gs->gsGlobal, &tex, 
-                        px0, py0, u1, v1, 
-                        px1, py1, u2, v1, 
-                        px2, py2, u2, v2, 
-                        px3, py3, u1, v2, 
+                        sx1, sy1, u1, v1, 
+                        sx2, sy1, u2, v1, 
+                        sx2, sy2, u2, v2, 
+                        sx1, sy2, u1, v2, 
                         gs->zCounter, textColor1, textColor2, textColor3, textColor4);
                 } else {
                     // Fallback: draw colored rectangle if font texture is not available
