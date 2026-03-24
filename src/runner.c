@@ -553,14 +553,15 @@ void Runner_draw(Runner* runner) {
         }
     }
 
-    for(int32_t i = 0; i < drawCount; i++)
-    {
-        Instance* inst = drawList[i];
-        int32_t codeId = findEventCodeIdAndOwner(runner->dataWin, inst->objectIndex, EVENT_DRAW, DRAW_NORMAL, nullptr);
-        if (codeId >= 0) {
-            Runner_executeEvent(runner, inst, EVENT_DRAW, DRAW_NORMAL);
-        } else if (runner->renderer != nullptr) {
-            Renderer_drawSelf(runner->renderer, inst);
+    if(runner->isGMS2) {
+        for(int32_t i = 0; i < drawCount; i++) {
+            Instance* inst = drawList[i];
+            int32_t codeId = findEventCodeIdAndOwner(runner->dataWin, inst->objectIndex, EVENT_DRAW, DRAW_NORMAL, nullptr);
+            if (codeId >= 0) {
+                Runner_executeEvent(runner, inst, EVENT_DRAW, DRAW_NORMAL);
+            } else if (runner->renderer != nullptr) {
+                Renderer_drawSelf(runner->renderer, inst);
+            }
         }
     }
 
