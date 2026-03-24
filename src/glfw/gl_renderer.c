@@ -869,19 +869,19 @@ static void glDrawTextColor(Renderer* renderer, const char* text, float x, float
 
             // top left
             verts[0] = px0; verts[1] = py0; verts[2] = u0; verts[3] = v0;
-            verts[4] = ((float) BGR_R(c1) / 255.0f);   verts[5] = ((float) BGR_G(c1) / 255.0f);   verts[6] = ((float) BGR_B(c1) / 255.0f);;  verts[7] = alpha;
+            verts[4] = ((float) BGR_R(c1) / 255.0f); verts[5] = ((float) BGR_G(c1) / 255.0f); verts[6] = ((float) BGR_B(c1) / 255.0f); verts[7] = alpha;
 
             // top right
             verts[8]  = px1; verts[9]  = py1; verts[10] = u1; verts[11] = v0;
-            verts[4] = ((float) BGR_R(c2) / 255.0f);   verts[5] = ((float) BGR_G(c2) / 255.0f);   verts[6] = ((float) BGR_B(c2) / 255.0f);;  verts[7] = alpha;
+            verts[4] = ((float) BGR_R(c2) / 255.0f); verts[5] = ((float) BGR_G(c2) / 255.0f); verts[6] = ((float) BGR_B(c2) / 255.0f); verts[7] = alpha;
 
             // bottom right
             verts[16] = px2; verts[17] = py2; verts[18] = u1; verts[19] = v1;
-            verts[4] = ((float) BGR_R(c3) / 255.0f);   verts[5] = ((float) BGR_G(c3) / 255.0f);   verts[6] = ((float) BGR_B(c3) / 255.0f);;  verts[7] = alpha;
+            verts[4] = ((float) BGR_R(c3) / 255.0f); verts[5] = ((float) BGR_G(c3) / 255.0f); verts[6] = ((float) BGR_B(c3) / 255.0f); verts[7] = alpha;
 
             // bottom left
             verts[24] = px3; verts[25] = py3; verts[26] = u0; verts[27] = v1;
-            verts[4] = ((float) BGR_R(c4) / 255.0f);   verts[5] = ((float) BGR_G(c4) / 255.0f);   verts[6] = ((float) BGR_B(c4) / 255.0f);;  verts[7] = alpha;
+            verts[4] = ((float) BGR_R(c4) / 255.0f); verts[5] = ((float) BGR_G(c4) / 255.0f); verts[6] = ((float) BGR_B(c4) / 255.0f); verts[7] = alpha;
 
             gl->quadCount++;
 
@@ -1096,6 +1096,7 @@ static RendererVtable glVtable = {
     .drawLine = glDrawLine,
     .drawLineColor = glDrawLineColor,
     .drawText = glDrawText,
+    .drawTextColor = glDrawTextColor,
     .flush = glRendererFlush,
     .createSpriteFromSurface = glCreateSpriteFromSurface,
     .deleteSprite = glDeleteSprite,
