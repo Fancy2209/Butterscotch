@@ -104,7 +104,7 @@ typedef struct Runner {
     float viewAngles[8]; // runtime-only view_angle per view (not stored in data.win)
     int32_t viewCurrent; // index of the view currently being drawn (for view_current)
     struct { char* key; int value; }* disabledObjects; // stb_ds string hashmap, nullptr = no filtering
-    struct { int key; Instance* value; }* disabledObjects;
+    struct { int key; Instance* value; }* instancesToId;
     bool isGMS2;
 } Runner;
 

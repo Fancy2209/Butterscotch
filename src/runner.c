@@ -305,14 +305,6 @@ static int compareInstanceDepth(const void* a, const void* b) {
 }
 
 
-static int compareLayerDepth(const void* a, const void* b) {
-    RoomLayer* instA = *(RoomLayer**) a;
-    RoomLayer* instB = *(RoomLayer**) b;
-    // Higher depth draws first (behind), lower depth draws last (in front)
-    if (instA->depth > instB->depth) return -1;
-    if (instB->depth > instA->depth) return 1;
-    return 0;
-}
 
 static void fireDrawSubtype(Runner* runner, Instance** drawList, int32_t drawCount, int32_t subtype) {
     repeat(drawCount, i) {
