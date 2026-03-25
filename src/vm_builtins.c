@@ -1510,7 +1510,7 @@ static RValue builtinDsListFindIndex([[maybe_unused]] VMContext* ctx, RValue* ar
 
 // ===[ ARRAY FUNCTIONS ]===
 
-static RValue builtinArrayLengthOneD(VMContext* ctx, RValue* args, int32_t argCount) {
+static RValue builtinArrayLength1d(VMContext* ctx, RValue* args, int32_t argCount) {
     // array_length_1d(array) takes a single array argument
     if (args[0].type != RVALUE_ARRAY_REF)
         return RValue_makeReal(0.0);
@@ -2872,8 +2872,6 @@ static RValue builtin_drawRectangleColor(VMContext* ctx, RValue* args, [[maybe_u
     Runner* runner = (Runner*) ctx->runner;
     if (runner->renderer == nullptr) return RValue_makeUndefined();
 
-    
-
     float x1 = (float) RValue_toReal(args[0]);
     float y1 = (float) RValue_toReal(args[1]);
     float x2 = (float) RValue_toReal(args[2]);
@@ -3970,7 +3968,7 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("ds_list_find_index", builtinDsListFindIndex);
 
     // Array
-    registerBuiltin("array_length_1d", builtinArrayLengthOneD);
+    registerBuiltin("array_length_1d", builtinArrayLength1d);
 
     // Steam stubs
     registerBuiltin("steam_initialised", builtin_steam_initialised);
