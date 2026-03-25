@@ -351,11 +351,9 @@ void Runner_draw(Runner* runner) {
     Drawable* drawables = nullptr;
 
     // Add visible instances
-    if(!runner->isGMS2) {
-        repeat(drawCount, i) {
-            Drawable d = { .type = DRAWABLE_INSTANCE, .depth = drawList[i]->depth, .instance = drawList[i] };
-            arrput(drawables, d);
-        }
+    repeat(drawCount, i) {
+        Drawable d = { .type = DRAWABLE_INSTANCE, .depth = drawList[i]->depth, .instance = drawList[i] };
+        arrput(drawables, d);
     }
 
     // Add tiles (skip hidden layers)
@@ -555,13 +553,9 @@ void Runner_draw(Runner* runner) {
 
     if(runner->isGMS2) {
         for(int32_t i = 0; i < drawCount; i++) {
+            // TODO: This isn't right, this is temporary
             Instance* inst = drawList[i];
-            int32_t codeId = findEventCodeIdAndOwner(runner->dataWin, inst->objectIndex, EVENT_DRAW, DRAW_NORMAL, nullptr);
-            if (codeId >= 0) {
-                Runner_executeEvent(runner, inst, EVENT_DRAW, DRAW_NORMAL);
-            } else if (runner->renderer != nullptr) {
-                Renderer_drawSelf(runner->renderer, inst);
-            }
+            inst->depth = d->layer->depth;
         }
     }
 
