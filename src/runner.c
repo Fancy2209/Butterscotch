@@ -305,6 +305,14 @@ static int compareInstanceDepth(const void* a, const void* b) {
 }
 
 
+static int compareLayerDepth(const void* a, const void* b) {
+    RoomLayer* instA = *(RoomLayer**) a;
+    RoomLayer* instB = *(RoomLayer**) b;
+    // Higher depth draws first (behind), lower depth draws last (in front)
+    if (instA->depth > instB->depth) return -1;
+    if (instB->depth > instA->depth) return 1;
+    return 0;
+}
 
 static void fireDrawSubtype(Runner* runner, Instance** drawList, int32_t drawCount, int32_t subtype) {
     repeat(drawCount, i) {
@@ -343,9 +351,11 @@ void Runner_draw(Runner* runner) {
     Drawable* drawables = nullptr;
 
     // Add visible instances
-    repeat(drawCount, i) {
-        Drawable d = { .type = DRAWABLE_INSTANCE, .depth = drawList[i]->depth, .instance = drawList[i] };
-        arrput(drawables, d);
+    if(!runner->isGMS2) {
+        repeat(drawCount, i) {
+            Drawable d = { .type = DRAWABLE_INSTANCE, .depth = drawList[i]->depth, .instance = drawList[i] };
+            arrput(drawables, d);
+        }
     }
 
     // Add tiles (skip hidden layers)
@@ -362,11 +372,23 @@ void Runner_draw(Runner* runner) {
     }
 
     if(runner->isGMS2) {
-        // Add visible layers
+        RoomLayer** layerDrawList = nullptr;
         int32_t layerCount = (int32_t) runner->currentRoom->layerCount;
         repeat(layerCount, i) {
-            if (!runner->currentRoom->layers[i].visible) continue;
-            Drawable d = { .type = DRAWABLE_LAYER, .depth = runner->currentRoom->layers[i].depth, .layer = &runner->currentRoom->layers[i] };
+            RoomLayer *inst = &runner->currentRoom->layers[i];
+            if (inst->visible) {
+                arrput(layerDrawList, inst);
+            }
+        }
+
+        // Sort by depth descending (higher depth first)
+        int32_t layerDrawCount = (int32_t) arrlen(layerDrawList);
+        if (layerDrawCount > 1) {
+            qsort(layerDrawList, layerDrawCount, sizeof(RoomLayer*), compareLayerDepth);
+        }
+        // Add visible layers
+        repeat(layerDrawCount, i) {
+            Drawable d = { .type = DRAWABLE_LAYER, .depth = layerDrawList[i]->depth, .layer = layerDrawList[i] };
             arrput(drawables, d);
         }
     }
@@ -507,12 +529,38 @@ void Runner_draw(Runner* runner) {
                         }
             } else if(d->layer->type == RoomLayerType_Instances) {
                 RoomLayerInstancesData *data = d->layer->instancesData;
-                // TODO: This isn't the right way to do this
+                // TODO: Use this for ordering instances in GMS2
                 for(uint32_t i = 0; i < data->instanceCount; i++)
                 {
                     Instance* inst = hmget(runner->instancesToId, data->instanceIds[i]);
-                    inst->depth = d->layer->depth;
+                    for(int32_t i = 0; i < drawCount; i++)
+                    {
+                        Instance* drawInst = drawList[i];
+                        if(inst->instanceId == drawInst->instanceId)
+                        {
+                            arrdel(drawList, i);
+                        }
+                    }
+                    int32_t codeId = findEventCodeIdAndOwner(runner->dataWin, inst->objectIndex, EVENT_DRAW, DRAW_NORMAL, nullptr);
+                    if(!inst->visible) continue;
+                    if (codeId >= 0) {
+                        Runner_executeEvent(runner, inst, EVENT_DRAW, DRAW_NORMAL);
+                    } else if (runner->renderer != nullptr) {
+                        Renderer_drawSelf(runner->renderer, inst);
+                    }
                 }
+            }
+        }
+    }
+
+    if(runner->isGMS2) {
+        for(int32_t i = 0; i < drawCount; i++) {
+            Instance* inst = drawList[i];
+            int32_t codeId = findEventCodeIdAndOwner(runner->dataWin, inst->objectIndex, EVENT_DRAW, DRAW_NORMAL, nullptr);
+            if (codeId >= 0) {
+                Runner_executeEvent(runner, inst, EVENT_DRAW, DRAW_NORMAL);
+            } else if (runner->renderer != nullptr) {
+                Renderer_drawSelf(runner->renderer, inst);
             }
         }
     }
@@ -609,6 +657,7 @@ static void initRoom(Runner* runner, int32_t roomIndex) {
             if (inst->persistent) {
                 arrput(keptInstances, inst);
             } else {
+                hmdel(runner->instancesToId, inst->instanceId);
                 Instance_free(inst);
             }
         }
@@ -662,6 +711,7 @@ static void initRoom(Runner* runner, int32_t roomIndex) {
             arrput(keptInstances, inst);
         } else {
             Instance_free(inst);
+            hmdel(runner->instancesToId, inst->instanceId);
         }
     }
     arrfree(runner->instances);
@@ -782,6 +832,7 @@ void Runner_cleanupDestroyedInstances(Runner* runner) {
             runner->instances[writeIdx++] = inst;
         } else {
             Instance_free(inst);
+            hmdel(runner->instancesToId, inst->instanceId);
         }
     }
     arrsetlen(runner->instances, writeIdx);
@@ -1274,6 +1325,7 @@ void Runner_step(Runner* runner) {
             int32_t prevSavedCount = (int32_t) arrlen(state->instances);
             repeat(prevSavedCount, i) {
                 Instance_free(state->instances[i]);
+                hmdel(runner->instancesToId, state->instances[i]->instanceId);
             }
             arrfree(state->instances);
             state->instances = nullptr;
@@ -1291,6 +1343,7 @@ void Runner_step(Runner* runner) {
                     arrput(state->instances, inst);
                 } else {
                     Instance_free(inst);
+                    hmdel(runner->instancesToId, inst->instanceId);
                 }
             }
             arrfree(runner->instances);
@@ -1741,6 +1794,7 @@ void Runner_free(Runner* runner) {
     // Free all instances
     repeat(arrlen(runner->instances), i) {
         Instance_free(runner->instances[i]);
+        hmdel(runner->instancesToId, runner->instances[i]->instanceId);
     }
     arrfree(runner->instances);
 
@@ -1751,6 +1805,7 @@ void Runner_free(Runner* runner) {
             int32_t savedCount = (int32_t) arrlen(state->instances);
             repeat(savedCount, j) {
                 Instance_free(state->instances[j]);
+                hmdel(runner->instancesToId, state->instances[i]->instanceId);
             }
             arrfree(state->instances);
             hmfree(state->tileLayerMap);
