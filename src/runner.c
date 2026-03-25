@@ -370,23 +370,12 @@ void Runner_draw(Runner* runner) {
     }
 
     if(runner->isGMS2) {
-        RoomLayer** layerDrawList = nullptr;
-        int32_t layerCount = (int32_t) runner->currentRoom->layerCount;
-        repeat(layerCount, i) {
-            RoomLayer *inst = &runner->currentRoom->layers[i];
-            if (inst->visible) {
-                arrput(layerDrawList, inst);
-            }
-        }
-
-        // Sort by depth descending (higher depth first)
-        int32_t layerDrawCount = (int32_t) arrlen(layerDrawList);
-        if (layerDrawCount > 1) {
-            qsort(layerDrawList, layerDrawCount, sizeof(RoomLayer*), compareLayerDepth);
-        }
         // Add visible layers
-        repeat(layerDrawCount, i) {
-            Drawable d = { .type = DRAWABLE_LAYER, .depth = layerDrawList[i]->depth, .layer = layerDrawList[i] };
+        int32_t layerCount = (int32_t) runner->currentRoom->layerCount;
+        int32_t layerDrawCount = (int32_t) arrlen(layerDrawList);
+        repeat(layerCount, i) {
+            if (!inst->visible) continue;
+            Drawable d = { .type = DRAWABLE_LAYER, .depth = &runner->currentRoom->layers[i]->depth, .layer = &runner->currentRoom->layers[i] };
             arrput(drawables, d);
         }
     }
@@ -527,35 +516,13 @@ void Runner_draw(Runner* runner) {
                         }
             } else if(d->layer->type == RoomLayerType_Instances) {
                 RoomLayerInstancesData *data = d->layer->instancesData;
-                // TODO: Use this for ordering instances in GMS2
+                // TODO: This isn't the right way to do this
                 for(uint32_t i = 0; i < data->instanceCount; i++)
                 {
                     Instance* inst = hmget(runner->instancesToId, data->instanceIds[i]);
-                    for(int32_t i = 0; i < drawCount; i++)
-                    {
-                        Instance* drawInst = drawList[i];
-                        if(inst->instanceId == drawInst->instanceId)
-                        {
-                            arrdel(drawList, i);
-                        }
-                    }
-                    int32_t codeId = findEventCodeIdAndOwner(runner->dataWin, inst->objectIndex, EVENT_DRAW, DRAW_NORMAL, nullptr);
-                    if(!inst->visible) continue;
-                    if (codeId >= 0) {
-                        Runner_executeEvent(runner, inst, EVENT_DRAW, DRAW_NORMAL);
-                    } else if (runner->renderer != nullptr) {
-                        Renderer_drawSelf(runner->renderer, inst);
-                    }
+                    inst->depth = d->layer->depth;
                 }
             }
-        }
-    }
-
-    if(runner->isGMS2) {
-        for(int32_t i = 0; i < drawCount; i++) {
-            // TODO: This isn't right, this is temporary
-            Instance* inst = drawList[i];
-            inst->depth = d->layer->depth;
         }
     }
 
