@@ -439,7 +439,7 @@ void Runner_draw(Runner* runner) {
 
                 Renderer_drawTile(runner->renderer, tile, offsetX, offsetY);
             }
-        } else if(d->type == DRAWABLE_INSTANCE) {
+        } else if (d->type == DRAWABLE_INSTANCE) {
             Instance* inst = d->instance;
             int32_t codeId = findEventCodeIdAndOwner(runner->dataWin, inst->objectIndex, EVENT_DRAW, DRAW_NORMAL, nullptr);
             if (codeId >= 0) {
@@ -447,7 +447,7 @@ void Runner_draw(Runner* runner) {
             } else if (runner->renderer != nullptr) {
                 Renderer_drawSelf(runner->renderer, inst);
             }
-        } else if(d->type == DRAWABLE_LAYER)
+        } else if (d->type == DRAWABLE_LAYER)
         {
             if(!d->layer->visible) continue;
             if(d->layer->type == RoomLayerType_Assets)
