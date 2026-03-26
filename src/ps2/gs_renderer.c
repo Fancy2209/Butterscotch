@@ -1297,20 +1297,11 @@ static void gsDrawText(Renderer* renderer, const char* text, float x, float y, f
                     float v1 = (float) atlasEntry->atlasY + (float) glyph->sourceY * ratioY;
                     float u2 = u1 + (float) glyph->sourceWidth * ratioX;
                     float v2 = v1 + (float) glyph->sourceHeight * ratioY;
-                    gsKit_prim_quad_texture(gs->gsGlobal, &tex, 
-                        sx1, sy1, u1, v1, 
-                        sx2, sy1, u2, v1, 
-                        sx2, sy2, u2, v2, 
-                        sx1, sy2, u1, v2, 
-                        gs->zCounter, textColor);
+
+                    gsKit_prim_sprite_texture(gs->gsGlobal, &tex, sx1, sy1, u1, v1, sx2, sy2, u2, v2, gs->zCounter, textColor);
                 } else {
                     // Fallback: draw colored rectangle if font texture is not available
-                    gsKit_prim_quad(gs->gsGlobal,
-                        sx1, sy1, 
-                        sx2, sy1, 
-                        sx2, sy2, 
-                        sx1, sy2, 
-                        gs->zCounter, textColor);
+                    gsKit_prim_sprite(gs->gsGlobal, sx1, sy1, sx2, sy2, gs->zCounter, textColor);
                 }
             }
 
