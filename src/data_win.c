@@ -240,8 +240,7 @@ static void parseGEN8(BinaryReader* reader, DataWin* dw) {
     g->activeTargets = BinaryReader_readUint64(reader);
     g->functionClassifications = BinaryReader_readUint64(reader);
     g->steamAppID = BinaryReader_readInt32(reader);
-    if(g->bytecodeVersion >= 14)
-    {
+    if (g->bytecodeVersion >= 14) {
         g->debuggerPort = BinaryReader_readUint32(reader);
     }
 
@@ -256,8 +255,7 @@ static void parseGEN8(BinaryReader* reader, DataWin* dw) {
         g->roomOrder = nullptr;
     }
 
-    if(g->major >= 2)
-    {
+    if (g->major >= 2) {
         BinaryReader_skip(reader, 8); // firstRandom (int64)
         BinaryReader_skip(reader, 8*4); // 4 Random Entries (one int64 or two int32)
 
@@ -503,15 +501,12 @@ static void parseSPRT(BinaryReader* reader, DataWin* dw, bool skipLoadingPrecise
             spr->specialType = true;
             spr->sVersion = BinaryReader_readUint32(reader);
             spr->sSpriteType = BinaryReader_readUint32(reader);
-            if(dw->gen8.major >= 2)
-            {
+            if (dw->gen8.major >= 2) {
                 spr->gms2PlaybackSpeed = BinaryReader_readFloat32(reader);
                 spr->gms2PlaybackSpeedType = BinaryReader_readUint32(reader);
-                if(spr->sVersion >= 2)
-                {
+                if (spr->sVersion >= 2) {
                     BinaryReader_skip(reader, 4); //sequenceOffset;
-                    if(spr->sVersion >= 3)
-                    {
+                    if (spr->sVersion >= 3) {
                        BinaryReader_skip(reader, 4); // nineSliceOffset;
                     }
                 }
@@ -548,21 +543,15 @@ static void parseSPRT(BinaryReader* reader, DataWin* dw, bool skipLoadingPrecise
                 repeat(maskDataCount, j) {
                     spr->masks[j] = safeMalloc(bytesPerMask);
                     BinaryReader_readBytes(reader, spr->masks[j], bytesPerMask);
-                    // Skip padding to 4-byte alignment
-                    uint32_t remainder = bytesPerMask % 4;
-                    if (remainder != 0) {
-                        BinaryReader_skip(reader, 4 - remainder);
-                    }
                 }
             } else {
-                repeat(maskDataCount, j) {
-                    BinaryReader_skip(reader, bytesPerMask);
-                    // Skip padding to 4-byte alignment
-                    uint32_t remainder = bytesPerMask % 4;
-                    if (remainder != 0) {
-                        BinaryReader_skip(reader, 4 - remainder);
-                    }
-                }
+                BinaryReader_skip(reader, bytesPerMask * maskDataCount);
+            }
+            // Pad the TOTAL mask data to 4-byte alignment (not per-mask)
+            uint32_t totalMaskBytes = bytesPerMask * maskDataCount;
+            uint32_t remainder = totalMaskBytes % 4;
+            if (remainder != 0) {
+                BinaryReader_skip(reader, 4 - remainder);
             }
         } else {
             spr->masks = nullptr;
@@ -589,7 +578,7 @@ static void parseBGND(BinaryReader* reader, DataWin* dw) {
         bg->smooth = BinaryReader_readBool32(reader);
         bg->preload = BinaryReader_readBool32(reader);
         bg->textureOffset = BinaryReader_readUint32(reader);
-        if(dw->gen8.major >= 2) {
+        if (dw->gen8.major >= 2) {
             bg->gms2UnknownAlways2 = BinaryReader_readUint32(reader);
             bg->gms2TileWidth = BinaryReader_readUint32(reader);
             bg->gms2TileHeight = BinaryReader_readUint32(reader);
@@ -606,9 +595,8 @@ static void parseBGND(BinaryReader* reader, DataWin* dw) {
             bg->gms2FrameLength = BinaryReader_readInt64(reader);
             int tileIdCount = bg->gms2TileCount * bg->gms2ItemsPerTileCount;
             bg->gms2TileIds = malloc(tileIdCount*sizeof(uint32_t));
-            for(int i = 0; i < tileIdCount; i++)
-            {
-                bg->gms2TileIds[i] = BinaryReader_readUint32(reader);
+            repeat(tileIdCount, j) {
+                bg->gms2TileIds[j] = BinaryReader_readUint32(reader);
             }
         }
     }
@@ -973,15 +961,13 @@ static void parseROOM(BinaryReader* reader, DataWin* dw) {
         room->gravityX = BinaryReader_readFloat32(reader);
         room->gravityY = BinaryReader_readFloat32(reader);
         room->metersPerPixel = BinaryReader_readFloat32(reader);
-        if(dw->gen8.major >= 2024 && dw->gen8.minor >= 13)
-        {
+        if (dw->gen8.major >= 2024 && dw->gen8.minor >= 13) {
             // skip instanceCreationOrderIDs
             int count = BinaryReader_readInt32(reader);
             BinaryReader_skip(reader, sizeof(int32_t) * count);
         }
         uint32_t layersPtr = 0;
-        if(dw->gen8.major >= 2)
-        {
+        if (dw->gen8.major >= 2) {
             layersPtr = BinaryReader_readUint32(reader);
             if(dw->gen8.minor >= 3) {
                 BinaryReader_skip(reader, 4); // sequencesPtr
@@ -1103,8 +1089,10 @@ static void parseROOM(BinaryReader* reader, DataWin* dw) {
             free(tilePtrs);
         }
 
-        if(dw->gen8.major >= 2)
-        {
+        // Fill with default values, these will be replaced if it is GM:S 2+
+        room->layerCount = 0;
+
+        if(dw->gen8.major >= 2) {
             // Tiles PointerList
             BinaryReader_seek(reader, layersPtr);
             {
@@ -1760,7 +1748,7 @@ void DataWin_free(DataWin* dw) {
         repeat(dw->room.count, i) {
             free(dw->room.rooms[i].gameObjects);
             free(dw->room.rooms[i].tiles);
-            if (dw->room.rooms[i].layers) {
+            if (dw->room.rooms[i].layerCount != 0) {
                 repeat(dw->room.rooms[i].layerCount, j) {
                     RoomLayer* layer = &dw->room.rooms[i].layers[j];
                     if (layer->backgroundData) free(layer->backgroundData);

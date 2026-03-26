@@ -730,12 +730,10 @@ int main(int argc, char* argv[]) {
         }
 
         // Update audio system (gain fading, stream to audsrv)
-        if (runner->audioSystem != nullptr) {
-            float dt = (float) deltaTime;
-            if (0.0f > dt) dt = 0.0f;
-            if (dt > 0.1f) dt = 0.1f;
-            runner->audioSystem->vtable->update(runner->audioSystem, dt);
-        }
+        float dt = (float) deltaTime;
+        if (0.0f > dt) dt = 0.0f;
+        if (dt > 0.1f) dt = 0.1f;
+        runner->audioSystem->vtable->update(runner->audioSystem, dt);
 
         // Update FPS counter (counts actual rendered frames, not game logic steps)
         if (gameFramesRan > 0) {
@@ -790,10 +788,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (runner->audioSystem != nullptr) {
-        runner->audioSystem->vtable->destroy(runner->audioSystem);
-        runner->audioSystem = nullptr;
-    }
+    runner->audioSystem->vtable->destroy(runner->audioSystem);
+    runner->audioSystem = nullptr;
     renderer->vtable->destroy(renderer);
     DataWin_free(dataWin);
 

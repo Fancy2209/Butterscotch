@@ -9,6 +9,9 @@
 #include <math.h>
 #include <ctype.h>
 #include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "rvalue.h"
 #include "stb_ds.h"
@@ -227,25 +230,25 @@ RValue VMBuiltins_getVariable(VMContext* ctx, const char* name, int32_t arrayInd
         if (strcmp(name, "room_height") == 0) return RValue_makeReal((GMLReal) runner->currentRoom->height);
         if (strcmp(name, "room_persistent") == 0) return RValue_makeBool(runner->currentRoom->persistent);
         if (strcmp(name, "view_current") == 0) return RValue_makeReal((GMLReal) runner->viewCurrent);
-        if (strcmp(name, "view_xview") == 0) {
+        if (strcmp(name, "view_xview") == 0 || strcmp(name, "view_xport") == 0) {
             if (arrayIndex >= 0 && MAX_VIEWS > arrayIndex) {
                 return RValue_makeReal((GMLReal) runner->currentRoom->views[arrayIndex].viewX);
             }
             return RValue_makeReal(0.0);
         }
-        if (strcmp(name, "view_yview") == 0) {
+        if (strcmp(name, "view_yview") == 0 || strcmp(name, "view_yport") == 0) {
             if (arrayIndex >= 0 && MAX_VIEWS > arrayIndex) {
                 return RValue_makeReal((GMLReal) runner->currentRoom->views[arrayIndex].viewY);
             }
             return RValue_makeReal(0.0);
         }
-        if (strcmp(name, "view_wview") == 0) {
+        if (strcmp(name, "view_wview") == 0 || strcmp(name, "view_wport") == 0) {
             if (arrayIndex >= 0 && MAX_VIEWS > arrayIndex) {
                 return RValue_makeReal((GMLReal) runner->currentRoom->views[arrayIndex].viewWidth);
             }
             return RValue_makeReal(0.0);
         }
-        if (strcmp(name, "view_hview") == 0) {
+        if (strcmp(name, "view_hview") == 0 || strcmp(name, "view_hport") == 0) {
             if (arrayIndex >= 0 && MAX_VIEWS > arrayIndex) {
                 return RValue_makeReal((GMLReal) runner->currentRoom->views[arrayIndex].viewHeight);
             }
@@ -332,9 +335,16 @@ RValue VMBuiltins_getVariable(VMContext* ctx, const char* name, int32_t arrayInd
 
     // Timing
     if (strcmp(name, "current_time") == 0) {
+        #ifdef _WIN32
+        LARGE_INTEGER freq, counter;
+        QueryPerformanceFrequency(&freq);
+        QueryPerformanceCounter(&counter);
+        GMLReal ms = (GMLReal) counter.QuadPart / (GMLReal) freq.QuadPart * 1000.0;
+        #else
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
         GMLReal ms = (GMLReal) ts.tv_sec * 1000.0 + (GMLReal) ts.tv_nsec / 1000000.0;
+        #endif
         return RValue_makeReal(ms);
     }
 
@@ -1163,6 +1173,69 @@ static RValue builtinRoomSetPersistent(VMContext* ctx, RValue* args, [[maybe_unu
     return RValue_makeUndefined();
 }
 
+// GMS2 camera compatibility - we treat view index as camera ID
+static RValue builtinViewGetCamera([[maybe_unused]] VMContext* ctx, RValue* args, int32_t argCount) {
+    if (1 > argCount) return RValue_makeReal(-1);
+    int32_t viewIndex = RValue_toInt32(args[0]);
+    if (viewIndex >= 0 && MAX_VIEWS > viewIndex) {
+        return RValue_makeReal((double) viewIndex);
+    }
+    return RValue_makeReal(-1);
+}
+
+static RValue builtinCameraGetViewX(VMContext* ctx, RValue* args, int32_t argCount) {
+    if (1 > argCount) return RValue_makeReal(-1);
+    Runner* runner = requireNotNullMessage(ctx->runner, "VM: camera_get_view_x called but no runner!");
+    int32_t cameraId = RValue_toInt32(args[0]);
+    if (cameraId >= 0 && MAX_VIEWS > cameraId) {
+        return RValue_makeReal((double) runner->currentRoom->views[cameraId].viewX);
+    }
+    return RValue_makeReal(-1);
+}
+
+static RValue builtinCameraGetViewY(VMContext* ctx, RValue* args, int32_t argCount) {
+    if (1 > argCount) return RValue_makeReal(-1);
+    Runner* runner = requireNotNullMessage(ctx->runner, "VM: camera_get_view_y called but no runner!");
+    int32_t cameraId = RValue_toInt32(args[0]);
+    if (cameraId >= 0 && MAX_VIEWS > cameraId) {
+        return RValue_makeReal((double) runner->currentRoom->views[cameraId].viewY);
+    }
+    return RValue_makeReal(-1);
+}
+
+static RValue builtinCameraGetViewWidth(VMContext* ctx, RValue* args, int32_t argCount) {
+    if (1 > argCount) return RValue_makeReal(-1);
+    Runner* runner = requireNotNullMessage(ctx->runner, "VM: camera_get_view_width called but no runner!");
+    int32_t cameraId = RValue_toInt32(args[0]);
+    if (cameraId >= 0 && MAX_VIEWS > cameraId) {
+        return RValue_makeReal((double) runner->currentRoom->views[cameraId].viewWidth);
+    }
+    return RValue_makeReal(-1);
+}
+
+static RValue builtinCameraGetViewHeight(VMContext* ctx, RValue* args, int32_t argCount) {
+    if (1 > argCount) return RValue_makeReal(-1);
+    Runner* runner = requireNotNullMessage(ctx->runner, "VM: camera_get_view_height called but no runner!");
+    int32_t cameraId = RValue_toInt32(args[0]);
+    if (cameraId >= 0 && MAX_VIEWS > cameraId) {
+        return RValue_makeReal((double) runner->currentRoom->views[cameraId].viewHeight);
+    }
+    return RValue_makeReal(-1);
+}
+
+static RValue builtinCameraSetViewPos(VMContext* ctx, RValue* args, int32_t argCount) {
+    if (1 > argCount) return RValue_makeReal(-1);
+    Runner* runner = requireNotNullMessage(ctx->runner, "VM: camera_set_view_pos called but no runner!");
+    int32_t cameraId = RValue_toInt32(args[0]);
+    int32_t x = RValue_toInt32(args[1]);
+    int32_t y = RValue_toInt32(args[2]);
+    if (cameraId >= 0 && MAX_VIEWS > cameraId) {
+        runner->currentRoom->views[cameraId].viewX = x;
+        runner->currentRoom->views[cameraId].viewY = y;
+    }
+    return RValue_makeUndefined();
+}
+
 // ===[ VARIABLE FUNCTIONS ]===
 
 static RValue builtinVariableGlobalExists(VMContext* ctx, RValue* args, int32_t argCount) {
@@ -1447,10 +1520,62 @@ static RValue builtinDsListFindIndex([[maybe_unused]] VMContext* ctx, RValue* ar
 
 // ===[ ARRAY FUNCTIONS ]===
 
-static RValue builtinArrayLengthId([[maybe_unused]] VMContext* ctx, [[maybe_unused]] RValue* args, [[maybe_unused]] int32_t argCount) {
-    // array_length_1d / array_length_2d stubs
-    logStubbedFunction(ctx, "array_length_1d");
-    return RValue_makeReal(0.0);
+static RValue builtinArrayLength1d(VMContext* ctx, RValue* args, int32_t argCount) {
+    // array_length_1d(array) takes a single array argument
+    if (args[0].type != RVALUE_ARRAY_REF)
+        return RValue_makeReal(0.0);
+
+    int32_t varID = args[0].int32;
+    int32_t maxIndex = -1;
+
+    // Search selfArrayMap on the current instance
+    Instance* inst = ctx->currentInstance;
+    if (inst != nullptr) {
+        repeat(hmlen(inst->selfArrayMap), idx) {
+            int64_t key = inst->selfArrayMap[idx].key;
+            int32_t keyVarID = (int32_t)(key >> 32);
+            if (keyVarID == varID) {
+                int32_t keyArrayIndex = (int32_t)(key & 0xFFFFFFFF);
+                if (keyArrayIndex > maxIndex) {
+                    maxIndex = keyArrayIndex;
+                }
+            }
+        }
+    }
+
+    // Also search globalArrayMap
+    repeat(hmlen(ctx->globalArrayMap), idx) {
+        int64_t key = ctx->globalArrayMap[idx].key;
+        int32_t keyVarID = (int32_t)(key >> 32);
+        if (keyVarID == varID) {
+            int32_t keyArrayIndex = (int32_t)(key & 0xFFFFFFFF);
+            if (keyArrayIndex > maxIndex) {
+                maxIndex = keyArrayIndex;
+            }
+        }
+    }
+
+    // Also search localArrayMap
+    repeat(hmlen(ctx->localArrayMap), idx) {
+        int64_t key = ctx->localArrayMap[idx].key;
+        int32_t keyVarID = (int32_t)(key >> 32);
+        if (keyVarID == varID) {
+            int32_t keyArrayIndex = (int32_t)(key & 0xFFFFFFFF);
+            if (keyArrayIndex > maxIndex) {
+                maxIndex = keyArrayIndex;
+            }
+        }
+    }
+
+    return RValue_makeReal((GMLReal)(maxIndex + 1));
+}
+
+// ===[ COLLISION FUNCTIONS]===
+
+static RValue builtinPlaceFree(VMContext* ctx, RValue* args, int32_t argCount) {
+    // place_free stub (Because I'm not doing collision right now.)
+    logStubbedFunction(ctx, "place_free");
+    return RValue_makeBool(true);
 }
 
 // ===[ STUBBED FUNCTIONS ]===
@@ -1539,6 +1664,15 @@ static RValue builtin_audioIsPlaying(VMContext* ctx, RValue* args, [[maybe_unuse
     bool playing = audio->vtable->isPlaying(audio, soundOrInstance);
     return RValue_makeBool(playing);
 }
+
+static RValue builtin_audioIsPaused(VMContext* ctx, RValue* args, [[maybe_unused]] int32_t argCount) {
+    AudioSystem* audio = getAudioSystem(ctx);
+    if (audio == nullptr) return RValue_makeBool(false);
+    int32_t soundOrInstance = RValue_toInt32(args[0]);
+    bool playing = audio->vtable->isPlaying(audio, soundOrInstance);
+    return RValue_makeBool(!playing);
+}
+
 
 static RValue builtin_audioSoundGain(VMContext* ctx, RValue* args, [[maybe_unused]] int32_t argCount) {
     AudioSystem* audio = getAudioSystem(ctx);
@@ -1685,6 +1819,22 @@ static RValue builtin_audioSoundSetTrackPosition(VMContext* ctx, RValue* args, [
     float pos = (float) RValue_toReal(args[1]);
     audio->vtable->setTrackPosition(audio, soundOrInstance, pos);
     return RValue_makeUndefined();
+}
+
+static RValue builtin_audioCreateStream(VMContext* ctx, RValue* args, [[maybe_unused]] int32_t argCount) {
+    AudioSystem* audio = getAudioSystem(ctx);
+    if (audio == nullptr) return RValue_makeReal(-1.0);
+    const char* filename = RValue_toString(args[0]);
+    int32_t streamIndex = audio->vtable->createStream(audio, filename);
+    return RValue_makeReal((GMLReal) streamIndex);
+}
+
+static RValue builtin_audioDestroyStream(VMContext* ctx, RValue* args, [[maybe_unused]] int32_t argCount) {
+    AudioSystem* audio = getAudioSystem(ctx);
+    if (audio == nullptr) return RValue_makeReal(-1.0);
+    int32_t streamIndex = RValue_toInt32(args[0]);
+    bool success = audio->vtable->destroyStream(audio, streamIndex);
+    return RValue_makeReal(success ? 1.0 : -1.0);
 }
 
 // Application surface stubs
@@ -1996,22 +2146,32 @@ static RValue builtinFileTextReadln([[maybe_unused]] VMContext* ctx, RValue* arg
 
     OpenTextFile* file = &openTextFiles[handle];
 
+    int size = 0;
+    int readPos = file->readPos;
+
+    // First we read everything to figure out what will be the size of the string
     // Skip past the current line (consume everything up to and including the newline)
-    while (file->contentLen > file->readPos) {
-        char c = file->content[file->readPos];
-        file->readPos++;
+    while (file->contentLen > readPos) {
+        char c = file->content[readPos];
+        readPos++;
         if (c == '\n')
             break;
         if (c == '\r') {
             // Handle \r\n
-            if (file->contentLen > file->readPos && file->content[file->readPos] == '\n') {
-                file->readPos++;
+            if (file->contentLen > readPos && file->content[readPos] == '\n') {
+                readPos++;
             }
             break;
         }
+        size++;
     }
 
-    return RValue_makeOwnedString(safeStrdup(""));
+    // Now we copy it because we already know the size of the string!
+    char* string = safeMalloc(size + 1); // +1 because the last one is null
+    memcpy(string, file->content + file->readPos, size);
+    string[size] = '\0';
+    file->readPos = readPos;
+    return RValue_makeOwnedString(string);
 }
 
 static RValue builtinFileTextReadReal([[maybe_unused]] VMContext* ctx, RValue* args, int32_t argCount) {
@@ -2746,6 +2906,51 @@ static RValue builtin_drawRectangle(VMContext* ctx, RValue* args, [[maybe_unused
     return RValue_makeUndefined();
 }
 
+static RValue builtin_drawRectangleColor(VMContext* ctx, RValue* args, [[maybe_unused]] int32_t argCount) { 
+    Runner* runner = (Runner*) ctx->runner;
+    if (runner->renderer == nullptr) return RValue_makeUndefined();
+
+    float x1 = (float) RValue_toReal(args[0]);
+    float y1 = (float) RValue_toReal(args[1]);
+    float x2 = (float) RValue_toReal(args[2]);
+    float y2 = (float) RValue_toReal(args[3]);
+    uint32_t color = (uint32_t) RValue_toInt32(args[4]);
+    bool outline = RValue_toBool(args[8]);
+
+    runner->renderer->vtable->drawRectangle(runner->renderer, x1, y1, x2, y2, color, runner->renderer->drawAlpha, outline);
+    return RValue_makeUndefined();
+}
+
+static RValue builtin_drawHealthbar(VMContext* ctx, RValue* args, [[maybe_unused]] int32_t argCount) {
+    Runner* runner = (Runner*) ctx->runner;
+    if (runner->renderer == nullptr) return RValue_makeUndefined();
+
+    float x1 = (float) RValue_toReal(args[0]);
+    float y1 = (float) RValue_toReal(args[1]);
+    float x2 = (float) RValue_toReal(args[2]);
+    float y2 = (float) RValue_toReal(args[3]);
+    float amount = (float) RValue_toReal(args[4]);
+
+    amount = amount / (float)100; // 0 - 1;
+    float healthbarX = (x1 * (1-amount) + x2 * amount);
+    //float healthbarY = (y1 * (1-amount) + y2 * amount);
+
+    uint32_t backCol = (uint32_t) RValue_toInt32(args[5]);
+    uint32_t minCol = (uint32_t) RValue_toInt32(args[6]);
+    uint32_t maxCol = (uint32_t) RValue_toInt32(args[7]);
+    uint32_t intermediateColor = Renderer_mixColors(minCol,maxCol,amount);
+
+    int32_t direction = RValue_toInt32(args[8]);
+    
+    bool showBack = RValue_toBool(args[9]);
+
+    if (showBack) {
+        runner->renderer->vtable->drawRectangle(runner->renderer, x1,y1,x2,y2,backCol, runner->renderer->drawAlpha, false);
+    }
+
+    runner->renderer->vtable->drawRectangle(runner->renderer,x1,y1,healthbarX,y2,intermediateColor, runner->renderer->drawAlpha, false);
+}
+
 static RValue builtin_drawSetColor(VMContext* ctx, RValue* args, [[maybe_unused]] int32_t argCount) {
     Runner* runner = (Runner*) ctx->runner;
     if (runner->renderer != nullptr) {
@@ -3319,8 +3524,17 @@ static RValue builtinCollisionLine(VMContext* ctx, RValue* args, int32_t argCoun
         GMLReal lineRight  = GMLReal_fmax(lx1, lx2);
         GMLReal lineTop    = GMLReal_fmin(ly1, ly2);
         GMLReal lineBottom = GMLReal_fmax(ly1, ly2);
-        if (bbox.left > lineRight || lineLeft > bbox.right || bbox.top > lineBottom || lineTop > bbox.bottom) continue;
-
+        // bbox.right/bbox.bottom are exclusive (marginRight + 1, marginBottom + 1), so use >= for those comparisons to correctly exclude boundary-touching cases
+        // See GM-HTML5's yyInstance.js "Collision_Line"
+        if (lineLeft >= bbox.right)
+            continue;
+        if (bbox.left > lineRight)
+            continue;
+        if (bbox.top > lineBottom)
+            continue;
+        if (lineTop >= bbox.bottom)
+            continue;
+        
         // Normalize line left-to-right for clipping
         GMLReal xl = lx1, yl = ly1, xr = lx2, yr = ly2;
         if (xl > xr) { GMLReal tmp = xl; xl = xr; xr = tmp; tmp = yl; yl = yr; yr = tmp; }
@@ -3345,7 +3559,7 @@ static RValue builtinCollisionLine(VMContext* ctx, RValue* args, int32_t argCoun
         // Y-bounds check after horizontal clipping
         GMLReal clippedTop    = GMLReal_fmin(yl, yr);
         GMLReal clippedBottom = GMLReal_fmax(yl, yr);
-        if (bbox.top > clippedBottom || clippedTop > bbox.bottom) continue;
+        if (bbox.top > clippedBottom || clippedTop >= bbox.bottom) continue;
 
         // Bbox-only mode: collision confirmed
         if (prec == 0) {
@@ -3564,6 +3778,16 @@ static RValue builtinActionSetAlarm(VMContext* ctx, [[maybe_unused]] RValue* arg
     return RValue_makeUndefined();
 }
 
+static RValue builtinActionIfVariable(VMContext* ctx, [[maybe_unused]] RValue* args, [[maybe_unused]] int32_t argCount) {
+    if (args[0].int32 || args[0].int64 || args[0].real || args[0].string) {
+        return args[1];
+    } else {
+        return args[2];
+    }
+}
+
+STUB_RETURN_UNDEFINED(action_sound)
+
 // ===[ Tile Layer Functions ]===
 
 static TileLayerState* getOrCreateTileLayer(Runner* runner, int32_t depth) {
@@ -3672,8 +3896,8 @@ static RValue builtinStringHashToNewline([[maybe_unused]] VMContext* ctx, RValue
     if (1 > argCount) return RValue_makeString(""); 
     char* str = RValue_toString(args[0]); 
     int32_t len = (int32_t) strlen(str); 
-    char *result = malloc((len + 1)*sizeof(char)); 
-    for(int i = 0; i < len; i++) { 
+    char *result = malloc((len + 1) * sizeof(char));
+    repeat(len, i) {
         char cur = str[i]; 
         if(cur == '#') 
             cur = '\n'; 
@@ -3681,11 +3905,11 @@ static RValue builtinStringHashToNewline([[maybe_unused]] VMContext* ctx, RValue
     }
     result[len] = '\0';
     free(str); 
-    return RValue_makeOwnedString(result); }
+    return RValue_makeOwnedString(result);
+}
 
 // json_decode
-// TODO: This is hardcoded for deltarune, for some reason the args string isn't working properly
-static RValue builtinJsonDecode(VMContext* ctx, [[maybe_unused]] RValue* args, int32_t argCount) {
+static RValue builtinJsonDecode([[maybe_unused]] VMContext* ctx, RValue* args, int32_t argCount) {
     if (1 > argCount) {
         fprintf(stderr, "[json_decode] Expected at least 1 argument\n");
         return RValue_makeUndefined();
@@ -3693,21 +3917,16 @@ static RValue builtinJsonDecode(VMContext* ctx, [[maybe_unused]] RValue* args, i
 
     int32_t mapIndex = dsMapCreate();
     DsMapEntry **mapPtr = dsMapGet(mapIndex);
-    Runner* runner = (Runner*) ctx->runner;
-    FileSystem* fs = runner->fileSystem;
-    char* content = fs->vtable->readFileText(fs, "lang/lang_en.json");
+    const char* content = args[0].string;
     const JsonValue* json = JsonReader_parse(content);
 
-    for(int i = 0; i < JsonReader_objectLength(json); i++)
-    {
-        const char *key = JsonReader_getObjectKey(json, i);
-        RValue val = RValue_makeOwnedString(
-            (char*)JsonReader_getString(
-                JsonReader_getObjectValue(json, i)
-            )
-        );
+    repeat(JsonReader_objectLength(json), i) {
+        const char *key = safeStrdup(JsonReader_getObjectKey(json, i));
+        RValue val = RValue_makeOwnedString(safeStrdup(JsonReader_getString(JsonReader_getObjectValue(json, i))));
         shput(*mapPtr, key, val);
     }
+
+    JsonReader_free(json);
 
     return RValue_makeReal((double) mapIndex);
 }
@@ -3767,6 +3986,7 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("distance_to_point", builtinDistanceToPoint);
     registerBuiltin("distance_to_object", builtinDistanceToObject);
     registerBuiltin("move_towards_point", builtinMoveTowardsPoint);
+    registerBuiltin("action_move_point", builtinMoveTowardsPoint);
     registerBuiltin("move_snap", builtinMoveSnap);
     registerBuiltin("lengthdir_x", builtinLengthdir_x);
     registerBuiltin("lengthdir_y", builtinLengthdir_y);
@@ -3788,6 +4008,14 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("room_next", builtinRoomNext);
     registerBuiltin("room_previous", builtinRoomPrevious);
     registerBuiltin("room_set_persistent", builtinRoomSetPersistent);
+
+    // GMS2 camera compatibility
+    registerBuiltin("view_get_camera", builtinViewGetCamera);
+    registerBuiltin("camera_get_view_x", builtinCameraGetViewX);
+    registerBuiltin("camera_get_view_y", builtinCameraGetViewY);
+    registerBuiltin("camera_get_view_width", builtinCameraGetViewWidth);
+    registerBuiltin("camera_get_view_height", builtinCameraGetViewHeight);
+    registerBuiltin("camera_set_view_pos", builtinCameraSetViewPos);
 
     // Variables
     registerBuiltin("variable_global_exists", builtinVariableGlobalExists);
@@ -3820,7 +4048,7 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("ds_list_find_index", builtinDsListFindIndex);
 
     // Array
-    registerBuiltin("array_length_1d", builtinArrayLengthId);
+    registerBuiltin("array_length_1d", builtinArrayLength1d);
 
     // Steam stubs
     registerBuiltin("steam_initialised", builtin_steam_initialised);
@@ -3836,6 +4064,7 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("audio_stop_sound", builtin_audioStopSound);
     registerBuiltin("audio_stop_all", builtin_audioStopAll);
     registerBuiltin("audio_is_playing", builtin_audioIsPlaying);
+    registerBuiltin("audio_is_paused", builtin_audioIsPaused);
     registerBuiltin("audio_sound_gain", builtin_audioSoundGain);
     registerBuiltin("audio_sound_pitch", builtin_audioSoundPitch);
     registerBuiltin("audio_sound_get_gain", builtin_audioSoundGetGain);
@@ -3853,6 +4082,8 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("audio_resume_all", builtin_audioResumeAll);
     registerBuiltin("audio_sound_get_track_position", builtin_audioSoundGetTrackPosition);
     registerBuiltin("audio_sound_set_track_position", builtin_audioSoundSetTrackPosition);
+    registerBuiltin("audio_create_stream", builtin_audioCreateStream);
+    registerBuiltin("audio_destroy_stream", builtin_audioDestroyStream);
 
     // Application surface
     registerBuiltin("application_surface_enable", builtin_application_surface_enable);
@@ -3969,6 +4200,8 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("draw_sprite_part", builtin_drawSpritePart);
     registerBuiltin("draw_sprite_part_ext", builtin_drawSpritePartExt);
     registerBuiltin("draw_rectangle", builtin_drawRectangle);
+    registerBuiltin("draw_rectangle_color", builtin_drawRectangleColor);
+    registerBuiltin("draw_healthbar", builtin_drawHealthbar);
     registerBuiltin("draw_set_color", builtin_drawSetColor);
     registerBuiltin("draw_set_alpha", builtin_drawSetAlpha);
     registerBuiltin("draw_set_font", builtin_drawSetFont);
@@ -4048,6 +4281,7 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("collision_line", builtinCollisionLine);
     registerBuiltin("collision_point", builtinCollisionPoint);
     registerBuiltin("instance_position", builtinInstancePosition);
+    registerBuiltin("place_free", builtinPlaceFree);
 
     // Tile layers
     registerBuiltin("tile_layer_hide", builtinTileLayerHide);
@@ -4060,7 +4294,9 @@ void VMBuiltins_registerAll(void) {
 
     // Misc
     registerBuiltin("get_timer", builtin_get_timer);
+    registerBuiltin("action_if_variable", builtinActionIfVariable);
     registerBuiltin("action_set_alarm", builtinActionSetAlarm);
+    registerBuiltin("action_sound",builtin_action_sound);
     registerBuiltin("string_hash_to_newline", builtinStringHashToNewline);
     registerBuiltin("json_decode", builtinJsonDecode);
     registerBuiltin("font_add_sprite_ext", builtin_font_add_sprite_ext);

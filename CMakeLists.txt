@@ -43,15 +43,26 @@ if(PLATFORM STREQUAL "glfw")
     # miniaudio
     target_include_directories(butterscotch PUBLIC vendor/miniaudio)
 
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(GLFW3 REQUIRED glfw3)
-    target_include_directories(butterscotch PRIVATE ${GLFW3_INCLUDE_DIRS})
-    target_link_libraries(butterscotch ${GLFW3_LIBRARIES} glad m pthread dl)
+    if(MINGW)
+        find_package(glfw3 REQUIRED)
+        set(GLFW3_LIBRARIES glfw3)
+
+        # Target Windows 7+ (avoids referencing newer APIs like MapViewOfFileNuma2 that MinGW import libs don't provide)
+        # https://github.com/mirror/mingw-w64/blob/master/mingw-w64-headers/include/sdkddkver.h
+        target_compile_definitions(butterscotch PRIVATE _WIN32_WINNT=0x0601 NTDDI_VERSION=0x06010000 WIN32_LEAN_AND_MEAN)
+        target_link_libraries(butterscotch ${GLFW3_LIBRARIES} glad m opengl32 gdi32 winmm)
+        target_link_options(butterscotch PRIVATE -static)
+    else()
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(GLFW3 REQUIRED glfw3)
+        target_include_directories(butterscotch PRIVATE ${GLFW3_INCLUDE_DIRS})
+        target_link_libraries(butterscotch ${GLFW3_LIBRARIES} glad m pthread dl)
+    endif()
 
     # Enable useful things to figure out when things have gone wrong related to memory corruption
     # (Also set -DCMAKE_BUILD_TYPE=Debug to get debug symbols!)
     set(ENABLE_ASAN OFF CACHE BOOL "Enable AddressSanitizer")
-    if(ENABLE_ASAN)
+    if(ENABLE_ASAN AND NOT MINGW)
         target_compile_options(butterscotch PRIVATE -fsanitize=address -fno-omit-frame-pointer)
         target_link_options(butterscotch PRIVATE -fsanitize=address)
     endif()

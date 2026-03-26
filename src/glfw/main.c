@@ -8,7 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <malloc.h>
+#endif
 
 #include "runner_keyboard.h"
 #include "runner.h"
@@ -16,6 +20,7 @@
 #include "gl_renderer.h"
 #include "glfw_file_system.h"
 #include "ma_audio_system.h"
+#include "noop_audio_system.h"
 #include "stb_ds.h"
 #include "stb_image_write.h"
 
@@ -386,10 +391,12 @@ int main(int argc, char* argv[]) {
     Gen8* gen8 = &dataWin->gen8;
     printf("Loaded \"%s\" (%d) successfully!\n", gen8->name, gen8->gameID);
 
+    #ifndef _WIN32
     {
         struct mallinfo2 mi = mallinfo2();
         printf("Memory after data.win parsing: used=%zu bytes (%.1f KB)\n", mi.uordblks, mi.uordblks / 1024.0f);
     }
+    #endif
 
     // Build window title
     char windowTitle[256];
@@ -531,6 +538,11 @@ int main(int argc, char* argv[]) {
         AudioSystem* audioSystem = (AudioSystem*) maAudio;
         audioSystem->vtable->init(audioSystem, dataWin, (FileSystem*) glfwFileSystem);
         runner->audioSystem = audioSystem;
+    } else {
+        NoopAudioSystem* noopAudio = NoopAudioSystem_create();
+        AudioSystem* audioSystem = (AudioSystem*) noopAudio;
+        audioSystem->vtable->init(audioSystem, dataWin, (FileSystem*) glfwFileSystem);
+        runner->audioSystem = audioSystem;
     }
 
     // Set up keyboard input
@@ -576,6 +588,7 @@ int main(int argc, char* argv[]) {
                 if (runner->currentRoomOrderPosition > 0) {
                     int32_t prevIdx = dw->gen8.roomOrder[runner->currentRoomOrderPosition - 1];
                     runner->pendingRoom = prevIdx;
+                    runner->audioSystem->vtable->stopAll(runner->audioSystem);
                     fprintf(stderr, "Debug: Going to previous room -> %s\n", dw->room.rooms[prevIdx].name);
                 }
             }
@@ -637,12 +650,10 @@ int main(int argc, char* argv[]) {
             Runner_step(runner);
 
             // Update audio system (gain fading, cleanup ended sounds)
-            if (runner->audioSystem != nullptr) {
-                float dt = (float) (glfwGetTime() - lastFrameTime);
-                if (0.0f > dt) dt = 0.0f;
-                if (dt > 0.1f) dt = 0.1f; // cap delta to avoid huge fades on lag spikes
-                runner->audioSystem->vtable->update(runner->audioSystem, dt);
-            }
+            float dt = (float) (glfwGetTime() - lastFrameTime);
+            if (0.0f > dt) dt = 0.0f;
+            if (dt > 0.1f) dt = 0.1f; // cap delta to avoid huge fades on lag spikes
+            runner->audioSystem->vtable->update(runner->audioSystem, dt);
 
             // Dump full runner state if this frame was requested
             if (hmget(args.dumpFrames, runner->frameCount)) {
@@ -769,11 +780,15 @@ int main(int argc, char* argv[]) {
             // Sleep for most of the remaining time, then spin-wait for precision
             double remaining = nextFrameTime - glfwGetTime();
             if (remaining > 0.002) {
+                #ifdef _WIN32
+                Sleep((DWORD) ((remaining - 0.001) * 1000));
+                #else
                 struct timespec ts = {
                     .tv_sec = 0,
                     .tv_nsec = (long) ((remaining - 0.001) * 1e9)
                 };
                 nanosleep(&ts, nullptr);
+                #endif
             }
             while (glfwGetTime() < nextFrameTime) {
                 // Spin-wait for the remaining sub-millisecond
@@ -794,10 +809,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Cleanup
-    if (runner->audioSystem != nullptr) {
-        runner->audioSystem->vtable->destroy(runner->audioSystem);
-        runner->audioSystem = nullptr;
-    }
+    runner->audioSystem->vtable->destroy(runner->audioSystem);
+    runner->audioSystem = nullptr;
     renderer->vtable->destroy(renderer);
 
     glfwDestroyWindow(window);
