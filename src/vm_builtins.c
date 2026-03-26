@@ -4138,7 +4138,7 @@ void VMBuiltins_registerAll(bool isGMS2) {
     registerBuiltin("instance_number", builtinInstanceNumber);
     registerBuiltin("instance_find", builtinInstanceFind);
     registerBuiltin("instance_destroy", builtinInstanceDestroy);
-    if(isGMS2) {
+    if(!isGMS2) {
         registerBuiltin("instance_create", builtinInstanceCreate);
     }
     else {
