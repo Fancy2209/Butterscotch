@@ -1290,7 +1290,6 @@ static void gsDrawText(Renderer* renderer, const char* text, float x, float y, f
                 float sx2 = (glyphX + glyphW - (float) gs->viewX) * gs->scaleX + gs->offsetX;
                 float sy2 = (glyphY + glyphH - (float) gs->viewY) * gs->scaleY + gs->offsetY;
 
-
                 if (hasTexture) {
                     // Compute UV coordinates: map glyph position within the font TPAG to atlas space
                     float u1 = (float) atlasEntry->atlasX + (float) glyph->sourceX * ratioX;
