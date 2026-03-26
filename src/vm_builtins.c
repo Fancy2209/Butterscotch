@@ -3899,7 +3899,7 @@ STUB_RETURN_VALUE(font_add_sprite_ext, -1.0)
 
 // ===[ REGISTRATION ]===
 
-void VMBuiltins_registerAll(bool isGMS2) {
+void VMBuiltins_registerAll(void) {
     requireMessage(!initialized, "Attempting to register all VMBuiltins, but it was already registered!");
     initialized = true;
 
