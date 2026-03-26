@@ -3934,15 +3934,7 @@ static RValue builtinPathEnd(VMContext* ctx, [[maybe_unused]] RValue* args, [[ma
 static RValue builtinStringHashToNewline([[maybe_unused]] VMContext* ctx, RValue* args, int32_t argCount) { 
     if (1 > argCount) return RValue_makeString(""); 
     char* str = RValue_toString(args[0]); 
-    int32_t len = (int32_t) strlen(str); 
-    char *result = malloc((len + 1) * sizeof(char));
-    repeat(len, i) {
-        char cur = str[i]; 
-        if(cur == '#') 
-            cur = '\n'; 
-        result[i] = cur; 
-    }
-    result[len] = '\0';
+    char *result = TextUtils_preprocessGmlText(str);
     free(str); 
     return RValue_makeOwnedString(result);
 }

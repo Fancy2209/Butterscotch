@@ -527,7 +527,7 @@ void Runner_draw(Runner* runner) {
                             // Single placement
                             runner->renderer->vtable->drawSprite(runner->renderer, tpagIndex, d->layer->xOffset, d->layer->yOffset, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0xFFFFFF, 1.0);
                         }
-            } else if(d->layer->type == ) {
+            } else if(d->layer->type == RoomLayerType_Instances) {
                 RoomLayerInstancesData *data = d->layer->instancesData;
                 // TODO: This isn't the right way to do this
                 repeat(data->instanceCount, i)
