@@ -161,6 +161,15 @@ static int64_t arrayMapKey(int32_t varID, int32_t arrayIndex) {
     return ((int64_t) varID << 32) | (uint32_t) arrayIndex;
 }
 
+// Check if any array entries exist for a given varID in an array map
+static bool arrayMapHasVariable(ArrayMapEntry* map, int32_t varID) {
+    repeat(hmlen(map), idx) {
+        int32_t keyVarID = (int32_t) (map[idx].key >> 32);
+        if (keyVarID == varID) return true;
+    }
+    return false;
+}
+
 // Read from an array map, returning default RValue_makeReal(0.0) if not found
 // Returns a non-owning copy: the array map retains ownership of any owned strings.
 static RValue arrayMapGet(ArrayMapEntry* map, int32_t varID, int32_t arrayIndex) {
@@ -448,7 +457,13 @@ static RValue resolveVariableRead(VMContext* ctx, int32_t instanceType, uint32_t
     switch (instanceType) {
         case INSTANCE_LOCAL:
             require(ctx->localVarCount > (uint32_t) varDef->varID);
-            result = ctx->localVars[varDef->varID];
+            if (ctx->localVars[varDef->varID].type == RVALUE_ARRAY_REF) {
+                result = ctx->localVars[varDef->varID];
+            } else if (arrayMapHasVariable(ctx->localArrayMap, varDef->varID)) {
+                result = RValue_makeArrayRef(varDef->varID);
+            } else {
+                result = ctx->localVars[varDef->varID];
+            }
             break;
         case INSTANCE_GLOBAL:
             require(ctx->globalVarCount > (uint32_t) varDef->varID);
@@ -809,7 +824,13 @@ static void handlePushScoped(VMContext* ctx, uint32_t instr, const uint8_t* extr
         }
     } else {
         require(count > (uint32_t) varDef->varID);
-        val = variables[varDef->varID];
+        if (variables[varDef->varID].type == RVALUE_ARRAY_REF) {
+            val = variables[varDef->varID];
+        } else if (arrayMapHasVariable(variableMap, varDef->varID)) {
+            val = RValue_makeArrayRef(varDef->varID);
+        } else {
+            val = variables[varDef->varID];
+        }
         val.ownsString = false; // Non-owning copy
         if (shouldTraceVariable(traceMap, scopeName, altScopeName, varDef->name)) {
             char* rvalueAsString = RValue_toStringTyped(val);
@@ -2037,10 +2058,10 @@ RValue VM_callCodeIndex(VMContext* ctx, int32_t codeIndex, RValue* args, int32_t
     ctx->bytecodeBase = saved->savedBytecodeBase;
 
     // Free callee locals
-    //repeat(ctx->localVarCount, i) {
-    //    RValue_free(&ctx->localVars[i]);
-    //}
-    //free(ctx->localVars);
+    repeat(ctx->localVarCount, i) {
+        RValue_free(&ctx->localVars[i]);
+    }
+    free(ctx->localVars);
 
     // Free callee local array map
     RValue_freeAllRValuesInMap(ctx->localArrayMap);
