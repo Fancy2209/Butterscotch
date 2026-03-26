@@ -627,6 +627,36 @@ static void glDrawLineColor(Renderer* renderer, float x1, float y1, float x2, fl
     gl->quadCount++;
 }
 
+static void glDrawTriangle(Renderer *renderer, float x1, float y1, float x2, float y2, float x3, float y3, bool outline)
+{
+    GLRenderer* gl = (GLRenderer*) renderer;
+    if(outline)
+    {
+        glDrawLine(renderer, x1, y1, x2, y2, 1, renderer->drawColor, 1.0);
+        glDrawLine(renderer, x2, y2, x3, y3, 1, renderer->drawColor, 1.0);
+        glDrawLine(renderer, x3, y3, x1, y1, 1, renderer->drawColor, 1.0);
+    } else {
+        float r = (float) BGR_R(renderer->drawColor) / 255.0f;
+        float g = (float) BGR_G(renderer->drawColor) / 255.0f;
+        float b = (float) BGR_B(renderer->drawColor) / 255.0f;
+
+        flushBatch(gl);
+        
+        int i = 0;
+        float verts[24] = {
+            x1, y1, 0.0f, 0.0f, r, g, b, renderer->drawAlpha,
+            x2, y2, 0.0f, 0.0f, r, g, b, renderer->drawAlpha,
+            x3, y3, 0.0f, 0.0f, r, g, b, renderer->drawAlpha,
+        };
+
+        glBindBuffer(GL_ARRAY_BUFFER, gl->vbo);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, 3 * FLOATS_PER_VERTEX * sizeof(float), verts);
+
+        glBindTexture(GL_TEXTURE_2D, gl->whiteTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+}
+
 // ===[ Text Drawing ]===
 
 static void glDrawText(Renderer* renderer, const char* text, float x, float y, float xscale, float yscale, float angleDeg) {
@@ -957,6 +987,7 @@ static RendererVtable glVtable = {
     .drawRectangle = glDrawRectangle,
     .drawLine = glDrawLine,
     .drawLineColor = glDrawLineColor,
+    .drawTriangle = glDrawTriangle,
     .drawText = glDrawText,
     .flush = glRendererFlush,
     .createSpriteFromSurface = glCreateSpriteFromSurface,

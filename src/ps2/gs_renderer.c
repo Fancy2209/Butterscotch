@@ -1329,6 +1329,25 @@ static void gsDrawText(Renderer* renderer, const char* text, float x, float y, f
     free(processed);
 }
 
+static void gsDrawTriangle(Renderer *renderer, float x1, float y1, float x2, float y2, float x3, float y3, bool outline)
+{
+    GSRenderer* gs = (GLRenderer*) renderer;
+    if(outline)
+    {
+        gsDrawLine(renderer, x1, y1, x2, y2, 1, renderer->drawColor, 1.0);
+        gsDrawLine(renderer, x2, y2, x3, y3, 1, renderer->drawColor, 1.0);
+        gsDrawLine(renderer, x3, y3, x1, y1, 1, renderer->drawColor, 1.0);
+    } else {
+        float r = (float) BGR_R(renderer->drawColor) / 255.0f;
+        float g = (float) BGR_G(renderer->drawColor) / 255.0f;
+        float b = (float) BGR_B(renderer->drawColor) / 255.0f;
+
+        u64 triColor = GS_SETREG_RGBAQ(r, g, b, alphaToGs(renderer->drawAlpha), 0x00);
+        gsKit_prim_triangle(x1, y1, x2, y2, x3, y3, gz->zCounter, triColor);
+        gs->zCounter++;
+    }
+}
+
 static void gsFlush([[maybe_unused]] Renderer* renderer) {
     // No-op: gsKit queues commands, executed in main loop
 }
@@ -1411,6 +1430,7 @@ static RendererVtable gsVtable = {
     .drawLine = gsDrawLine,
     .drawLineColor = gsDrawLineColor,
     .drawText = gsDrawText,
+    .drawTriangle = gsDrawTriangle,
     .flush = gsFlush,
     .createSpriteFromSurface = gsCreateSpriteFromSurface,
     .deleteSprite = gsDeleteSprite,

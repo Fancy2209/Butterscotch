@@ -3171,6 +3171,22 @@ static RValue builtin_draw_line_width_colour(VMContext* ctx, RValue* args, [[may
     return RValue_makeUndefined();
 }
 
+// draw_triangle(x1, y1, x2, y2, x3, y3, outline)
+static RValue builtin_draw_triangle(VMContext* ctx, RValue* args, [[maybe_unused]] int32_t argCount) {
+    Runner* runner = (Runner*) ctx->runner;
+    if (runner->renderer != nullptr) {
+        float x1 = (float) RValue_toReal(args[0]);
+        float y1 = (float) RValue_toReal(args[1]);
+        float x2 = (float) RValue_toReal(args[2]);
+        float y2 = (float) RValue_toReal(args[3]);
+        float x3 = (float) RValue_toReal(args[4]);
+        float y3 = (float) RValue_toReal(args[5]);
+        bool outline = (float) RValue_toBool(args[6]);
+        runner->renderer->vtable->drawTriangle(runner->renderer, x1, y1, x2, y2, x3, y3, outline);
+    }
+    return RValue_makeUndefined();
+}
+
 static RValue builtin_draw_set_colour(VMContext* ctx, RValue* args, [[maybe_unused]] int32_t argCount) {
     Runner* runner = (Runner*) ctx->runner;
     if (runner->renderer != nullptr) {
@@ -4184,6 +4200,7 @@ void VMBuiltins_registerAll(void) {
     registerBuiltin("draw_line_width", builtin_draw_line_width);
     registerBuiltin("draw_line_width_colour", builtin_draw_line_width_colour);
     registerBuiltin("draw_line_width_color", builtin_draw_line_width_colour);
+    registerBuiltin("draw_triangle", builtin_draw_triangle);
     registerBuiltin("draw_set_colour", builtin_draw_set_colour);
     registerBuiltin("draw_get_colour", builtin_draw_get_colour);
     registerBuiltin("draw_get_color", builtin_draw_get_color);
