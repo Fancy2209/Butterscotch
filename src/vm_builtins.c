@@ -1506,9 +1506,11 @@ static RValue builtinDsListFindIndex([[maybe_unused]] VMContext* ctx, RValue* ar
             case RVALUE_BOOL:
                 if (item.int32 == needle.int32) return RValue_makeReal((GMLReal) i);
                 break;
+#ifndef NO_RVALUE_INT64
             case RVALUE_INT64:
                 if (item.int64 == needle.int64) return RValue_makeReal((GMLReal) i);
                 break;
+#endif
             case RVALUE_STRING:
                 if (item.string != nullptr && needle.string != nullptr && strcmp(item.string, needle.string) == 0) return RValue_makeReal((GMLReal) i);
                 break;
@@ -3780,7 +3782,37 @@ static RValue builtinActionSetAlarm(VMContext* ctx, [[maybe_unused]] RValue* arg
 }
 
 static RValue builtinActionIfVariable(VMContext* ctx, [[maybe_unused]] RValue* args, [[maybe_unused]] int32_t argCount) {
-    if (args[0].int32 || args[0].int64 || args[0].real || args[0].string) {
+    bool check;
+    switch (args[0].type) {
+        case RVALUE_REAL: {
+            check = args[0].real != 0.0;
+            break;
+        }
+        case RVALUE_INT32: {
+            check = args[0].int32 != 0;
+            break;
+        }
+#ifndef NO_RVALUE_INT64
+        case RVALUE_INT64: {
+            check = args[0].int64 != 0;
+            break;
+        }
+#endif
+        case RVALUE_BOOL: {
+            check = args[0].int32 != 0;
+            break;
+        }
+        case RVALUE_STRING: {
+            check = args[0].string != nullptr && args[0].string[0] != '\0';
+            break;
+        }
+        default: {
+            check = false;
+            break;
+        }
+    }
+
+    if (check) {
         return args[1];
     } else {
         return args[2];

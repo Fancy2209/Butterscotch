@@ -1060,8 +1060,10 @@ static void handleAdd(VMContext* ctx) {
         stackPush(ctx,RValue_makeOwnedString(result));
     } else if (a.type == RVALUE_INT32 && b.type == RVALUE_INT32) {
         stackPush(ctx, RValue_makeInt32(a.int32 + b.int32));
+#ifndef NO_RVALUE_INT64
     } else if (a.type == RVALUE_INT64 && b.type == RVALUE_INT64) {
         stackPush(ctx, RValue_makeInt64(a.int64 + b.int64));
+#endif
     } else {
         GMLReal result = RValue_toReal(a) + RValue_toReal(b);
         RValue_free(&a);
@@ -1075,8 +1077,10 @@ static void handleSub(VMContext* ctx) {
     RValue a = stackPop(ctx);
     if (a.type == RVALUE_INT32 && b.type == RVALUE_INT32) {
         stackPush(ctx, RValue_makeInt32(a.int32 - b.int32));
+#ifndef NO_RVALUE_INT64
     } else if (a.type == RVALUE_INT64 && b.type == RVALUE_INT64) {
         stackPush(ctx, RValue_makeInt64(a.int64 - b.int64));
+#endif
     } else {
         GMLReal result = RValue_toReal(a) - RValue_toReal(b);
         RValue_free(&a);
@@ -1110,8 +1114,10 @@ static void handleMul(VMContext* ctx) {
         }
     } else if (a.type == RVALUE_INT32 && b.type == RVALUE_INT32) {
         stackPush(ctx, RValue_makeInt32(a.int32 * b.int32));
+#ifndef NO_RVALUE_INT64
     } else if (a.type == RVALUE_INT64 && b.type == RVALUE_INT64) {
         stackPush(ctx, RValue_makeInt64(a.int64 * b.int64));
+#endif
     } else {
         GMLReal result = RValue_toReal(a) * RValue_toReal(b);
         RValue_free(&a);
@@ -1252,11 +1258,13 @@ static void handleConv(VMContext* ctx, uint32_t instr) {
         case 0x62: { char* s = RValue_toString(val); result = RValue_makeOwnedString(s); break; }
         case 0xF2: result = val; break;
 
+#ifndef NO_RVALUE_INT64
         // Int64 (3) -> other
         case 0x03: result = RValue_makeReal((GMLReal) val.int64); break;
         case 0x23: result = RValue_makeInt32((int32_t) val.int64); break;
         case 0x43: result = RValue_makeBool(val.int64 > 0); break;
         case 0x53: result = val; break; // Int64 -> Variable (passthrough)
+#endif
 
         // Bool (4) -> other
         case 0x04: result = RValue_makeReal((GMLReal) val.int32); break;

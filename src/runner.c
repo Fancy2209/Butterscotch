@@ -1505,9 +1505,11 @@ static void writeRValueJson(JsonWriter* w, RValue val) {
         case RVALUE_INT32:
             JsonWriter_int(w, val.int32);
             break;
+#ifndef NO_RVALUE_INT64
         case RVALUE_INT64:
             JsonWriter_int(w, val.int64);
             break;
+#endif
         case RVALUE_STRING:
             JsonWriter_string(w, val.string);
             break;
