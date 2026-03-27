@@ -125,6 +125,12 @@ static bool isValidAlarmIndex(int alarmIndex) {
     return alarmIndex >= 0 && GML_ALARM_COUNT > alarmIndex;
 }
 
+#ifndef __wii__
+#include <GLFW/glfw3.h>
+#else
+#include <SDL2/SDL_timer.h>
+#endif
+
 RValue VMBuiltins_getVariable(VMContext* ctx, const char* name, int32_t arrayIndex) {
     Instance* inst = (Instance*) ctx->currentInstance;
     Runner* runner = (Runner*) ctx->runner;
@@ -336,17 +342,11 @@ RValue VMBuiltins_getVariable(VMContext* ctx, const char* name, int32_t arrayInd
 
     // Timing
     if (strcmp(name, "current_time") == 0) {
-        #ifdef _WIN32
-        LARGE_INTEGER freq, counter;
-        QueryPerformanceFrequency(&freq);
-        QueryPerformanceCounter(&counter);
-        GMLReal ms = (GMLReal) counter.QuadPart / (GMLReal) freq.QuadPart * 1000.0;
-        #else
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        GMLReal ms = (GMLReal) ts.tv_sec * 1000.0 + (GMLReal) ts.tv_nsec / 1000000.0;
-        #endif
-        return RValue_makeReal(ms);
+#ifndef __wii__
+        return RValue_makeReal(glfwGetTime());
+#else
+        return RValue_makeReal(SDL_GetTicks64());
+#endif
     }
 
     // argument_count
@@ -394,7 +394,7 @@ RValue VMBuiltins_getVariable(VMContext* ctx, const char* name, int32_t arrayInd
     if (strcmp(name, "path_action_continue") == 0) return RValue_makeReal(2.0);
     if (strcmp(name, "path_action_reverse") == 0) return RValue_makeReal(3.0);
 
-    if (strcmp(name, "fps") == 0) return RValue_makeReal(ctx->dataWin->gen8.gms2FPS);
+    if (strcmp(name, "fps") == 0) return RValue_makeReal(ctx->runner->currentRoom->speed);
 
     fprintf(stderr, "VM: Unhandled built-in variable read '%s' (arrayIndex=%d)\n", name, arrayIndex);
     return RValue_makeReal(0.0);

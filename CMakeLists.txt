@@ -5,7 +5,6 @@ set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 add_compile_options(-Wall -Wextra)
 
-set(PLATFORM "" CACHE STRING "Platform backend")
 
 # Build metadata
 set(BUTTERSCOTCH_COMMIT_HASH "unknown" CACHE STRING "Git commit hash")
@@ -70,6 +69,16 @@ if(PLATFORM STREQUAL "glfw")
         target_compile_options(butterscotch PRIVATE -fsanitize=address -fno-omit-frame-pointer)
         target_link_options(butterscotch PRIVATE -fsanitize=address)
     endif()
+elseif(PLATFORM STREQUAL "wii")
+    find_package(PkgConfig QUIET)
+    # stb_image
+    pkg_check_modules(SDL2 IMPORTED_TARGET sdl2)
+    pkg_check_modules(OPENGL IMPORTED_TARGET opengl)
+    target_include_directories(butterscotch PUBLIC vendor/stb/image)
+    target_link_libraries(butterscotch m opengx PkgConfig::SDL2)
+    add_compile_definitions(USE_FLOAT_REALS)
+    add_compile_definitions(NO_RVALUE_INT64)
+    add_compile_options(-fsingle-precision-constant)
 elseif(PLATFORM STREQUAL "ps2")
     # The PS2 EE has a single-precision FPU only, so double is software-emulated
     add_compile_definitions(USE_FLOAT_REALS)

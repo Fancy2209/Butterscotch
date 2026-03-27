@@ -1,4 +1,5 @@
 #include "vm.h"
+#include "rvalue.h"
 #include "vm_builtins.h"
 #include "instance.h"
 #include "runner.h"
@@ -1130,6 +1131,7 @@ static void handleDiv(VMContext* ctx) {
     RValue b = stackPop(ctx);
     RValue a = stackPop(ctx);
     GMLReal divisor = RValue_toReal(b);
+    printf("VM: DoDiv :: %f / %f\n", RValue_toReal(a), divisor);
     if (divisor == 0.0) {
         fprintf(stderr, "VM: DoDiv :: Divide by zero\n");
         abort();

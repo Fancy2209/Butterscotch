@@ -84,9 +84,10 @@ uint32_t BinaryReader_readUint32(BinaryReader* reader) {
 }
 
 float BinaryReader_readFloat32(BinaryReader* reader) {
+    uint32_t bits = BinaryReader_readUint32(reader);
     float value;
-    readCheck(reader, &value, 4);
-    return (float)READ_32((uint32_t)value);
+    memcpy(&value, &bits, 4);
+    return value;
 }
 
 uint64_t BinaryReader_readUint64(BinaryReader* reader) {
