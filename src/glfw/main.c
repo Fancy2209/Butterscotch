@@ -690,7 +690,6 @@ int main(int argc, char* argv[]) {
         glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
 
         // Clear the default framebuffer (window background) to black
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
