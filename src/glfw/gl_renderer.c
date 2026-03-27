@@ -615,7 +615,7 @@ static int32_t glCreateSpriteFromSurface(Renderer* renderer, int32_t x, int32_t 
     if (0 >= w || 0 >= h) return -1;
 
     // Read pixels from the FBO (application_surface)
-    glReadBuffer(GL_FRONT);
+    glReadBuffer(GL_BACK);
 
     uint8_t* pixels = safeMalloc((size_t) w * (size_t) h * 4);
     if (pixels == nullptr) return -1;
