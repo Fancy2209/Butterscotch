@@ -103,7 +103,6 @@ static void glBeginFrame(Renderer* renderer, int32_t gameW, int32_t gameH, int32
     gl->gameW = gameW;
     gl->gameH = gameH;
 
-    glViewport(0, 0, gameW, gameH);
 }
 
 static void glBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_t viewW, int32_t viewH, int32_t portX, int32_t portY, int32_t portW, int32_t portH, float viewAngle) {
@@ -116,9 +115,11 @@ static void glBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_
     // FBO uses game resolution, port coordinates are in game space
     // OpenGL viewport Y is bottom-up, game Y is top-down
     int32_t glPortY = gl->gameH - portY - portH;
-    glViewport(portX, glPortY, portW, portH);
+    // Keep the aspect ratio
+    int32_t glPortW = gl->windowH * gl->gameW / gl->gameH;
+    glViewport((gl->windowW-glPortW)/2, glPortY, glPortW, gl->windowH);
     glEnable(GL_SCISSOR_TEST);
-    glScissor(portX, glPortY, portW, portH);
+    glScissor((gl->windowW-glPortW)/2, glPortY, glPortW, gl->windowH);
 
     // Build orthographic projection (Y-down for GML coordinate system)
     Matrix4f projection;
