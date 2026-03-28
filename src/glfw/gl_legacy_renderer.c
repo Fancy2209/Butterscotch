@@ -717,19 +717,19 @@ static void glDrawTextColor(Renderer* renderer, const char* text, float x, float
 
             // Write 4 vertices
             glBegin(GL_QUADS);            
-                glColor4ub(BGR_R(c1), BGR_G(c1), BGR_B(c1), alpha);
+                glColor4ub(BGR_R(c1), BGR_G(c1), BGR_B(c1), alpha * 255);
                 glTexCoord2f(u0, v0);
                 glVertex2f(px0, py0); 
 
-                glColor4ub(BGR_R(c2), BGR_G(c2), BGR_B(c2), alpha);
+                glColor4ub(BGR_R(c2), BGR_G(c2), BGR_B(c2), alpha * 255);
                 glTexCoord2f(u1, v0);
                 glVertex2f(px1, py1); 
 
-                glColor4ub(BGR_R(c3), BGR_G(c3), BGR_B(c3), alpha);
+                glColor4ub(BGR_R(c3), BGR_G(c3), BGR_B(c3), alpha * 255);
                 glTexCoord2f(u1, v1);
                 glVertex2f(px2, py2); 
 
-                glColor4ub(BGR_R(c4), BGR_G(c4), BGR_B(c4), alpha);
+                glColor4ub(BGR_R(c4), BGR_G(c4), BGR_B(c4), alpha * 255);
                 glTexCoord2f(u0, v1);
                 glVertex2f(px3, py3);
             glEnd();
