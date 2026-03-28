@@ -627,6 +627,36 @@ static void glDrawLineColor(Renderer* renderer, float x1, float y1, float x2, fl
     gl->quadCount++;
 }
 
+static void glDrawTriangle(Renderer *renderer, float x1, float y1, float x2, float y2, float x3, float y3, bool outline)
+{
+    GLRenderer* gl = (GLRenderer*) renderer;
+    if(outline)
+    {
+        glDrawLine(renderer, x1, y1, x2, y2, 1, renderer->drawColor, 1.0);
+        glDrawLine(renderer, x2, y2, x3, y3, 1, renderer->drawColor, 1.0);
+        glDrawLine(renderer, x3, y3, x1, y1, 1, renderer->drawColor, 1.0);
+    } else {
+        float r = (float) BGR_R(renderer->drawColor) / 255.0f;
+        float g = (float) BGR_G(renderer->drawColor) / 255.0f;
+        float b = (float) BGR_B(renderer->drawColor) / 255.0f;
+
+        flushBatch(gl);
+        
+        int i = 0;
+        float verts[24] = {
+            x1, y1, 0.0f, 0.0f, r, g, b, renderer->drawAlpha,
+            x2, y2, 0.0f, 0.0f, r, g, b, renderer->drawAlpha,
+            x3, y3, 0.0f, 0.0f, r, g, b, renderer->drawAlpha,
+        };
+
+        glBindBuffer(GL_ARRAY_BUFFER, gl->vbo);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, 3 * FLOATS_PER_VERTEX * sizeof(float), verts);
+
+        glBindTexture(GL_TEXTURE_2D, gl->whiteTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+}
+
 // ===[ Text Drawing ]===
 
 static void glDrawText(Renderer* renderer, const char* text, float x, float y, float xscale, float yscale, float angleDeg) {
@@ -657,12 +687,10 @@ static void glDrawText(Renderer* renderer, const char* text, float x, float y, f
     float g = (float) BGR_G(color) / 255.0f;
     float b = (float) BGR_B(color) / 255.0f;
 
-    // Preprocess: convert # to \n (and \# to literal #)
-    char* processed = TextUtils_preprocessGmlText(text);
-    int32_t textLen = (int32_t) strlen(processed);
+    int32_t textLen = (int32_t) strlen(text);
 
     // Count lines, treating \r\n and \n\r as single breaks
-    int32_t lineCount = TextUtils_countLines(processed, textLen);
+    int32_t lineCount = TextUtils_countLines(text, textLen);
 
     // Vertical alignment offset
     float totalHeight = (float) lineCount * (float) font->emSize;
@@ -682,13 +710,13 @@ static void glDrawText(Renderer* renderer, const char* text, float x, float y, f
     for (int32_t lineIdx = 0; lineCount > lineIdx; lineIdx++) {
         // Find end of current line
         int32_t lineEnd = lineStart;
-        while (textLen > lineEnd && !TextUtils_isNewlineChar(processed[lineEnd])) {
+        while (textLen > lineEnd && !TextUtils_isNewlineChar(text[lineEnd])) {
             lineEnd++;
         }
         int32_t lineLen = lineEnd - lineStart;
 
         // Horizontal alignment offset for this line
-        float lineWidth = TextUtils_measureLineWidth(font, processed + lineStart, lineLen);
+        float lineWidth = TextUtils_measureLineWidth(font, text + lineStart, lineLen);
         float halignOffset = 0;
         if (renderer->drawHalign == 1) halignOffset = -lineWidth / 2.0f;
         else if (renderer->drawHalign == 2) halignOffset = -lineWidth;
@@ -698,7 +726,7 @@ static void glDrawText(Renderer* renderer, const char* text, float x, float y, f
         // Render each glyph in the line
         int32_t pos = 0;
         while (lineLen > pos) {
-            uint16_t ch = TextUtils_decodeUtf8(processed + lineStart, lineLen, &pos);
+            uint16_t ch = TextUtils_decodeUtf8(text + lineStart, lineLen, &pos);
             FontGlyph* glyph = TextUtils_findGlyph(font, ch);
             if (glyph == nullptr) continue;
             if (glyph->sourceWidth == 0 || glyph->sourceHeight == 0) {
@@ -751,7 +779,7 @@ static void glDrawText(Renderer* renderer, const char* text, float x, float y, f
             cursorX += glyph->shift;
             if (lineLen > pos) {
                 int32_t savedPos = pos;
-                uint16_t nextCh = TextUtils_decodeUtf8(processed + lineStart, lineLen, &pos);
+                uint16_t nextCh = TextUtils_decodeUtf8(text + lineStart, lineLen, &pos);
                 pos = savedPos;
                 cursorX += TextUtils_getKerningOffset(glyph, nextCh);
             }
@@ -760,13 +788,11 @@ static void glDrawText(Renderer* renderer, const char* text, float x, float y, f
         cursorY += (float) font->emSize;
         // Skip past the newline, treating \r\n and \n\r as single breaks
         if (textLen > lineEnd) {
-            lineStart = TextUtils_skipNewline(processed, lineEnd, textLen);
+            lineStart = TextUtils_skipNewline(text, lineEnd, textLen);
         } else {
             lineStart = lineEnd;
         }
     }
-
-    free(processed);
 }
 
 static void glDrawTextColor(Renderer* renderer, const char* text, float x, float y, float xscale, float yscale, float angleDeg, int32_t _c1, int32_t _c2, int32_t _c3, int32_t _c4, float alpha) {
@@ -1132,6 +1158,7 @@ static RendererVtable glVtable = {
     .drawRectangle = glDrawRectangle,
     .drawLine = glDrawLine,
     .drawLineColor = glDrawLineColor,
+    .drawTriangle = glDrawTriangle,
     .drawText = glDrawText,
     .drawTextColor = glDrawTextColor,
     .flush = glRendererFlush,

@@ -59,9 +59,13 @@ if(PLATFORM STREQUAL "glfw")
         target_link_libraries(butterscotch ${GLFW3_LIBRARIES} glad m pthread dl)
     endif()
 
-    # Enable useful things to figure out when things have gone wrong related to memory corruption
-    # (Also set -DCMAKE_BUILD_TYPE=Debug to get debug symbols!)
-    set(ENABLE_ASAN OFF CACHE BOOL "Enable AddressSanitizer")
+    # Enable AddressSanitizer by default in Debug builds
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(ENABLE_ASAN_DEFAULT ON)
+    else()
+        set(ENABLE_ASAN_DEFAULT OFF)
+    endif()
+    set(ENABLE_ASAN ${ENABLE_ASAN_DEFAULT} CACHE BOOL "Enable AddressSanitizer")
     if(ENABLE_ASAN AND NOT MINGW)
         target_compile_options(butterscotch PRIVATE -fsanitize=address -fno-omit-frame-pointer)
         target_link_options(butterscotch PRIVATE -fsanitize=address)
@@ -69,6 +73,8 @@ if(PLATFORM STREQUAL "glfw")
 elseif(PLATFORM STREQUAL "ps2")
     # The PS2 EE has a single-precision FPU only, so double is software-emulated
     add_compile_definitions(USE_FLOAT_REALS)
+    # By disabling Int64 support, we can fit the entire RValue struct in 8 bytes, improving performance and memory usage
+    add_compile_definitions(NO_RVALUE_INT64)
     # Treat unsuffixed float constants as single-precision to avoid accidental
     # float->double promotions on platforms with no hardware double
     add_compile_options(-fsingle-precision-constant)

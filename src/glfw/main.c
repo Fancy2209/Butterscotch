@@ -389,7 +389,7 @@ int main(int argc, char* argv[]) {
     );
 
     Gen8* gen8 = &dataWin->gen8;
-    printf("Loaded \"%s\" (%d) successfully!\n", gen8->name, gen8->gameID);
+    printf("Loaded \"%s\" (%d) successfully! [Bytecode Version %u]\n", gen8->name, gen8->gameID, gen8->bytecodeVersion);
 
     #ifndef _WIN32
     {
@@ -696,6 +696,25 @@ int main(int argc, char* argv[]) {
         int32_t gameW = (int32_t) gen8->defaultWindowWidth;
         int32_t gameH = (int32_t) gen8->defaultWindowHeight;
 
+        // Compute FBO size from the bounding box of all enabled view ports
+        // GMS2 sizes the application surface to the port bounds, then stretches to the window
+        bool viewsEnabled = (activeRoom->flags & 1) != 0;
+        if (viewsEnabled) {
+        int32_t maxRight = 0;
+        int32_t maxBottom = 0;
+        repeat(8, vi) {
+            if (!activeRoom->views[vi].enabled) continue;
+                int32_t right = activeRoom->views[vi].portX + activeRoom->views[vi].portWidth;
+                int32_t bottom = activeRoom->views[vi].portY + activeRoom->views[vi].portHeight;
+                if (right > maxRight) maxRight = right;
+                if (bottom > maxBottom) maxBottom = bottom;
+            }
+            if (maxRight > 0 && maxBottom > 0) {
+                gameW = maxRight;
+                gameH = maxBottom;
+            }
+        }
+
         renderer->vtable->beginFrame(renderer, gameW, gameH, fbWidth, fbHeight);
 
         // Clear FBO with room background color
@@ -710,7 +729,6 @@ int main(int argc, char* argv[]) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Render each enabled view (or a default full-screen view if views are disabled)
-        bool viewsEnabled = (activeRoom->flags & 1) != 0;
         bool anyViewRendered = false;
 
         if (viewsEnabled) {
@@ -757,7 +775,7 @@ int main(int argc, char* argv[]) {
             // Bind FBO so glReadPixels reads from the game's native-resolution texture
             GLRenderer* gl = (GLRenderer*) renderer;
             glBindFramebuffer(GL_READ_FRAMEBUFFER, gl->fbo);
-            captureScreenshot(args.screenshotPattern, runner->frameCount, (int) gen8->defaultWindowWidth, (int) gen8->defaultWindowHeight);
+            captureScreenshot(args.screenshotPattern, runner->frameCount, gameW, gameH);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         }
 
