@@ -1,4 +1,5 @@
 #include "data_win.h"
+#include "glfw/gl_legacy_renderer.h"
 #include "vm.h"
 
 #include <glad/glad.h>
@@ -63,6 +64,7 @@ typedef struct {
     bool traceEventInherited;
     const char* recordInputsPath;
     const char* playbackInputsPath;
+    bool legacyGL;
 } CommandLineArgs;
 
 static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) {
@@ -95,6 +97,7 @@ static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) 
         {"disassemble", required_argument, nullptr, 'A'},
         {"record-inputs", required_argument, nullptr, 'I'},
         {"playback-inputs", required_argument, nullptr, 'P'},
+        {"legacy-gl", no_argument, nullptr, 'g'},
         {nullptr,               0,                 nullptr,  0 }
     };
 
@@ -200,6 +203,9 @@ static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) 
             }
             case 'D':
                 args->debug = true;
+                break;
+            case 'g':
+                args->legacyGL = true;
                 break;
             case 'A':
                 shput(args->disassemble, optarg, true);
@@ -493,6 +499,8 @@ int main(int argc, char* argv[]) {
     runner->vmContext->traceEventInherited = args.traceEventInherited;
 
     // Init GLFW
+    if(args.legacyGL)
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
     if (!glfwInit()) {
         fprintf(stderr, "Failed to initialize GLFW\n");
         DataWin_free(dataWin);
@@ -527,7 +535,12 @@ int main(int argc, char* argv[]) {
     }
 
     // Initialize the renderer
-    Renderer* renderer = GLRenderer_create();
+    Renderer* renderer = nullptr;
+    if(args.legacyGL)
+        renderer = GLLegacyRenderer_create();
+    else
+        renderer = GLRenderer_create();
+
     renderer->vtable->init(renderer, dataWin);
     runner->renderer = renderer;
 
