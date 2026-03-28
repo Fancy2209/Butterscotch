@@ -1446,25 +1446,26 @@ static void gsDrawTextColor(Renderer* renderer, const char* text, float x, float
 
                 // GS modulate mode: Output = Texture * Vertex / 128
                 // Scale vertex RGB from 0-255 to 0-128 so white (255) becomes 1.0x multiplier
+                uint8_t a = hasTexture ? alphaToGS(alpha) : alpha*255;
                 uint8_t r1 = hasTexture ? (BGR_R(c1) >> 1) : BGR_R(c1);
                 uint8_t g1 = hasTexture ? (BGR_G(c1) >> 1) : BGR_G(c1);
                 uint8_t b1 = hasTexture ? (BGR_B(c1) >> 1) : BGR_B(c1);
-                u64 textColor1 = GS_SETREG_RGBAQ(r1, g1, b1, alpha, 0x00);
+                u64 textColor1 = GS_SETREG_RGBAQ(r1, g1, b1, a, 0x00);
 
                 uint8_t r2 = hasTexture ? (BGR_R(c2) >> 1) : BGR_R(c2);
                 uint8_t g2 = hasTexture ? (BGR_G(c2) >> 1) : BGR_G(c2);
                 uint8_t b2 = hasTexture ? (BGR_B(c2) >> 1) : BGR_B(c2);
-                u64 textColor2 = GS_SETREG_RGBAQ(r2, g2, b2, alpha, 0x00);
+                u64 textColor2 = GS_SETREG_RGBAQ(r2, g2, b2, a, 0x00);
 
                 uint8_t r3 = hasTexture ? (BGR_R(c3) >> 1) : BGR_R(c3);
                 uint8_t g3 = hasTexture ? (BGR_G(c3) >> 1) : BGR_G(c3);
                 uint8_t b3 = hasTexture ? (BGR_B(c3) >> 1) : BGR_B(c3);
-                u64 textColor3 = GS_SETREG_RGBAQ(r3, g3, b3, alpha, 0x00);
+                u64 textColor3 = GS_SETREG_RGBAQ(r3, g3, b3, a, 0x00);
 
                 uint8_t r4 = hasTexture ? (BGR_R(c4) >> 1) : BGR_R(c4);
                 uint8_t g4 = hasTexture ? (BGR_G(c4) >> 1) : BGR_G(c4);
                 uint8_t b4 = hasTexture ? (BGR_B(c4) >> 1) : BGR_B(c4);
-                u64 textColor4 = GS_SETREG_RGBAQ(r4, g4, b4, alpha, 0x00);
+                u64 textColor4 = GS_SETREG_RGBAQ(r4, g4, b4, a, 0x00);
 
                 if (hasTexture) {
                     // Compute UV coordinates: map glyph position within the font TPAG to atlas space
@@ -1472,12 +1473,16 @@ static void gsDrawTextColor(Renderer* renderer, const char* text, float x, float
                     float v1 = (float) atlasEntry->atlasY + (float) glyph->sourceY * ratioY;
                     float u2 = u1 + (float) glyph->sourceWidth * ratioX;
                     float v2 = v1 + (float) glyph->sourceHeight * ratioY;
-                    gsKit_prim_quad_goraud_texture(gs->gsGlobal, &tex, 
-                        sx1, sy1, u1, v1, 
-                        sx2, sy1, u2, v1, 
-                        sx2, sy2, u2, v2, 
-                        sx1, sy2, u1, v2, 
-                        gs->zCounter, textColor1, textColor2, textColor3, textColor4);
+                    gsKit_prim_triangle_goraud_texture_3d(gs->gsGlobal, &tex,
+                            sx1, sy1, gs->zCounter, u1, v1, 
+                            sx2, sy1, gs->zCounter, u2, v1, 
+                            sx2, sy2, gs->zCounter, u2, v2,
+                            textColor1, textColor2, textColor3);
+                    gsKit_prim_triangle_goraud_texture_3d(gs->gsGlobal, &tex,
+                        sx1, sy1, gs->zCounter, u1, v1,
+                        sx2, sy2, gs->zCounter, u2, v2, 
+                        sx1, sy2, gs->zCounter, u1, v2,
+                        textColor1, textColor3, textColor4);
                 } else {
                     // Fallback: draw colored rectangle if font texture is not available
                     gsKit_prim_quad_gouraud(gs->gsGlobal,
