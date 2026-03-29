@@ -139,21 +139,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        float scaleX = (float)fbWidth / gameW;
-        float scaleY = (float)fbHeight / gameH;
-
-        // Keep aspect ratio
-        float scale = (scaleX < scaleY) ? scaleX : scaleY;
-
-        // Final size
-        int vpW = (int)(gameW * scale);
-        int vpH = (int)(gameH * scale);
-
-        // Centering
-        int vpX = (fbWidth - vpW) / 2;
-        int vpY = (fbHeight - vpH) / 2;
-
-        renderer->vtable->beginFrame(renderer, vpX, vpY, vpW, vpH);
+        renderer->vtable->beginFrame(renderer, gameW, gameH, fbWidth, fbHeight);
 
         // Clear FBO with room background color
         if (runner->drawBackgroundColor) {
