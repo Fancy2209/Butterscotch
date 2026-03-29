@@ -15,8 +15,8 @@
 #include "gl_legacy_renderer.h"
 #include "glfw_file_system.h"
 #include "../noop_audio_system.h"
-#include "../stb_ds.h"
-#include "../stb_image_write.h"
+#include "stb_ds.h"
+#include "stb_image_write.h"
 
 #include "utils.h"
 
