@@ -55,16 +55,16 @@ static void gsDestroy(Renderer* renderer) {
     free(gs);
 }
 
-static void gsBeginFrame(Renderer* renderer, [[maybe_unused]] int32_t gameW, [[maybe_unused]] int32_t gameH, [[maybe_unused]] int32_t windowW, [[maybe_unused]] int32_t windowH) {
+static void gsBeginFrame(Renderer* renderer, __attribute__((unused)) int32_t gameW, __attribute__((unused)) int32_t gameH, __attribute__((unused)) int32_t windowW, __attribute__((unused)) int32_t windowH) {
     GsRendererFlat* gs = (GsRendererFlat*) renderer;
     gs->zCounter = 1;
 }
 
-static void gsEndFrame([[maybe_unused]] Renderer* renderer) {
+static void gsEndFrame(__attribute__((unused)) Renderer* renderer) {
     // No-op: flip happens in main loop
 }
 
-static void gsBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_t viewW, int32_t viewH, [[maybe_unused]] int32_t portX, [[maybe_unused]] int32_t portY, int32_t portW, int32_t portH, [[maybe_unused]] float viewAngle) {
+static void gsBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_t viewW, int32_t viewH, __attribute__((unused)) int32_t portX, __attribute__((unused)) int32_t portY, int32_t portW, int32_t portH, __attribute__((unused)) float viewAngle) {
     GsRendererFlat* gs = (GsRendererFlat*) renderer;
     gs->viewX = viewX;
     gs->viewY = viewY;
@@ -85,11 +85,11 @@ static void gsBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_
     gs->offsetY = (448.0f - renderedH) / 2.0f;
 }
 
-static void gsEndView([[maybe_unused]] Renderer* renderer) {
+static void gsEndView(__attribute__((unused)) Renderer* renderer) {
     // No-op
 }
 
-static void gsDrawSprite(Renderer* renderer, int32_t tpagIndex, float x, float y, float originX, float originY, float xscale, float yscale, [[maybe_unused]] float angleDeg, [[maybe_unused]] uint32_t color, float alpha) {
+static void gsDrawSprite(Renderer* renderer, int32_t tpagIndex, float x, float y, float originX, float originY, float xscale, float yscale, __attribute__((unused)) float angleDeg, __attribute__((unused)) uint32_t color, float alpha) {
     GsRendererFlat* gs = (GsRendererFlat*) renderer;
     DataWin* dw = renderer->dataWin;
 
@@ -122,7 +122,7 @@ static void gsDrawSprite(Renderer* renderer, int32_t tpagIndex, float x, float y
     gs->zCounter++;
 }
 
-static void gsDrawSpritePart(Renderer* renderer, int32_t tpagIndex, [[maybe_unused]] int32_t srcOffX, [[maybe_unused]] int32_t srcOffY, int32_t srcW, int32_t srcH, float x, float y, float xscale, float yscale, [[maybe_unused]] uint32_t color, float alpha) {
+static void gsDrawSpritePart(Renderer* renderer, int32_t tpagIndex, __attribute__((unused)) int32_t srcOffX, __attribute__((unused)) int32_t srcOffY, int32_t srcW, int32_t srcH, float x, float y, float xscale, float yscale, __attribute__((unused)) uint32_t color, float alpha) {
     GsRendererFlat* gs = (GsRendererFlat*) renderer;
 
     if (0 > tpagIndex || (uint32_t) tpagIndex >= renderer->dataWin->tpag.count) return;
@@ -143,7 +143,7 @@ static void gsDrawSpritePart(Renderer* renderer, int32_t tpagIndex, [[maybe_unus
     gs->zCounter++;
 }
 
-static void gsDrawRectangle(Renderer* renderer, float x1, float y1, float x2, float y2, uint32_t color, float alpha, [[maybe_unused]] bool outline) {
+static void gsDrawRectangle(Renderer* renderer, float x1, float y1, float x2, float y2, uint32_t color, float alpha, __attribute__((unused)) bool outline) {
     GsRendererFlat* gs = (GsRendererFlat*) renderer;
 
     // BGR to RGB
@@ -162,7 +162,7 @@ static void gsDrawRectangle(Renderer* renderer, float x1, float y1, float x2, fl
     gs->zCounter++;
 }
 
-static void gsDrawLine(Renderer* renderer, float x1, float y1, float x2, float y2, [[maybe_unused]] float width, uint32_t color, float alpha) {
+static void gsDrawLine(Renderer* renderer, float x1, float y1, float x2, float y2, __attribute__((unused)) float width, uint32_t color, float alpha) {
     GsRendererFlat* gs = (GsRendererFlat*) renderer;
 
     uint8_t r = BGR_R(color);
@@ -181,11 +181,11 @@ static void gsDrawLine(Renderer* renderer, float x1, float y1, float x2, float y
 }
 
 // PS2 gsKit doesn't support per-vertex colors on lines, so we just use color1
-static void gsDrawLineColor(Renderer* renderer, float x1, float y1, float x2, float y2, float width, uint32_t color1, [[maybe_unused]] uint32_t color2, float alpha) {
+static void gsDrawLineColor(Renderer* renderer, float x1, float y1, float x2, float y2, float width, uint32_t color1, __attribute__((unused)) uint32_t color2, float alpha) {
     renderer->vtable->drawLine(renderer, x1, y1, x2, y2, width, color1, alpha);
 }
 
-static void gsDrawText(Renderer* renderer, const char* text, float x, float y, float xscale, float yscale, [[maybe_unused]] float angleDeg) {
+static void gsDrawText(Renderer* renderer, const char* text, float x, float y, float xscale, float yscale, __attribute__((unused)) float angleDeg) {
     GsRendererFlat* gs = (GsRendererFlat*) renderer;
     DataWin* dw = renderer->dataWin;
 
@@ -238,7 +238,7 @@ static void gsDrawText(Renderer* renderer, const char* text, float x, float y, f
         while (lineLen > pos) {
             uint16_t ch = TextUtils_decodeUtf8(line, lineLen, &pos);
             FontGlyph* glyph = TextUtils_findGlyph(font, ch);
-            if (glyph == nullptr) continue;
+            if (glyph == NULL) continue;
 
             if (glyph->sourceWidth > 0 && glyph->sourceHeight > 0) {
                 float glyphX = x + (cursorX + (float) glyph->offset) * xscale * font->scaleX;
@@ -280,16 +280,16 @@ static void gsDrawText(Renderer* renderer, const char* text, float x, float y, f
     free(processed);
 }
 
-static void gsFlush([[maybe_unused]] Renderer* renderer) {
+static void gsFlush(__attribute__((unused)) Renderer* renderer) {
     // No-op: gsKit queues commands, executed in main loop via gsKit_queue_exec
 }
 
-static int32_t gsCreateSpriteFromSurface([[maybe_unused]] Renderer* renderer, [[maybe_unused]] int32_t x, [[maybe_unused]] int32_t y, [[maybe_unused]] int32_t w, [[maybe_unused]] int32_t h, [[maybe_unused]] bool removeback, [[maybe_unused]] bool smooth, [[maybe_unused]] int32_t xorig, [[maybe_unused]] int32_t yorig) {
+static int32_t gsCreateSpriteFromSurface(__attribute__((unused)) Renderer* renderer, __attribute__((unused)) int32_t x, __attribute__((unused)) int32_t y, __attribute__((unused)) int32_t w, __attribute__((unused)) int32_t h, __attribute__((unused)) bool removeback, __attribute__((unused)) bool smooth, __attribute__((unused)) int32_t xorig, __attribute__((unused)) int32_t yorig) {
     fprintf(stderr, "GsRendererFlat: createSpriteFromSurface not supported on PS2\n");
     return -1;
 }
 
-static void gsDeleteSprite([[maybe_unused]] Renderer* renderer, [[maybe_unused]] int32_t spriteIndex) {
+static void gsDeleteSprite(__attribute__((unused)) Renderer* renderer, __attribute__((unused)) int32_t spriteIndex) {
     // No-op
 }
 

@@ -81,7 +81,7 @@ static void parseSoundBank(Ps2AudioSystem* ps2) {
 
     FILE* f = fopen(path, "rb");
     free(path);
-    if (f == nullptr) {
+    if (f == NULL) {
         fprintf(stderr, "PS2AudioSystem: Could not open SOUNDBNK.BIN\n");
         return;
     }
@@ -131,7 +131,7 @@ static void openSoundsBin(Ps2AudioSystem* ps2) {
     char* path = PS2Utils_createDevicePath("SOUNDS.BIN");
 
     ps2->soundsFile = fopen(path, "rb");
-    if (ps2->soundsFile == nullptr) {
+    if (ps2->soundsFile == NULL) {
         fprintf(stderr, "PS2AudioSystem: Could not open SOUNDS.BIN at %s\n", path);
         free(path);
         return;
@@ -150,7 +150,7 @@ static DecodedPcmEntry* cacheGet(Ps2AudioSystem* ps2, int32_t audoIndex) {
             return &ps2->cacheEntries[i];
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 static bool cacheIsInUse(Ps2AudioSystem* ps2, int32_t audoIndex) {
@@ -170,7 +170,7 @@ static DecodedPcmEntry* cacheInsert(Ps2AudioSystem* ps2, int32_t audoIndex) {
     uint32_t pcmBytes = sampleCount * sizeof(int16_t);
 
     // Find a free slot
-    DecodedPcmEntry* slot = nullptr;
+    DecodedPcmEntry* slot = NULL;
     for (int i = 0; LRU_CACHE_SIZE > i; i++) {
         if (0 > ps2->cacheEntries[i].audoIndex) {
             slot = &ps2->cacheEntries[i];
@@ -179,7 +179,7 @@ static DecodedPcmEntry* cacheInsert(Ps2AudioSystem* ps2, int32_t audoIndex) {
     }
 
     // No free slot: evict LRU entry not in active use
-    if (slot == nullptr) {
+    if (slot == NULL) {
         uint32_t oldestAccess = UINT32_MAX;
         for (int i = 0; LRU_CACHE_SIZE > i; i++) {
             DecodedPcmEntry* entry = &ps2->cacheEntries[i];
@@ -189,9 +189,9 @@ static DecodedPcmEntry* cacheInsert(Ps2AudioSystem* ps2, int32_t audoIndex) {
             }
         }
 
-        if (slot == nullptr) {
+        if (slot == NULL) {
             // fprintf(stderr, "PS2AudioSystem: Cache full, all entries in use! Cannot decode audoIndex %" PRId32 "\n", audoIndex);
-            return nullptr;
+            return NULL;
         }
 
         // Free the evicted entry's PCM data
@@ -273,17 +273,17 @@ static Ps2SoundInstance* findFreeSlot(Ps2AudioSystem* ps2) {
     }
 
     // Second pass: evict the lowest-priority ended sound
-    Ps2SoundInstance* best = nullptr;
+    Ps2SoundInstance* best = NULL;
     repeat(MAX_PS2_SOUND_INSTANCES, i) {
         Ps2SoundInstance* inst = &ps2->instances[i];
         if (inst->positionInt >= inst->totalSamples && !inst->loop) {
-            if (best == nullptr || best->priority > inst->priority) {
+            if (best == NULL || best->priority > inst->priority) {
                 best = inst;
             }
         }
     }
 
-    if (best != nullptr) {
+    if (best != NULL) {
         best->active = false;
     }
 
@@ -292,9 +292,9 @@ static Ps2SoundInstance* findFreeSlot(Ps2AudioSystem* ps2) {
 
 static Ps2SoundInstance* findSfxInstanceById(Ps2AudioSystem* ps2, int32_t instanceId) {
     int32_t slotIndex = instanceId - PS2_SOUND_INSTANCE_ID_BASE;
-    if (0 > slotIndex || slotIndex >= MAX_PS2_SOUND_INSTANCES) return nullptr;
+    if (0 > slotIndex || slotIndex >= MAX_PS2_SOUND_INSTANCES) return NULL;
     Ps2SoundInstance* inst = &ps2->instances[slotIndex];
-    if (!inst->active || inst->instanceId != instanceId) return nullptr;
+    if (!inst->active || inst->instanceId != instanceId) return NULL;
     return inst;
 }
 
@@ -305,7 +305,7 @@ static Ps2MusicStream* findMusicStreamById(Ps2AudioSystem* ps2, int32_t instance
             return &ps2->musicStreams[i];
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 // ===[ Software Mixer ]===
@@ -323,7 +323,7 @@ static void mixAudio(Ps2AudioSystem* ps2, int16_t* outBuf, int32_t samplePairs) 
             if (!inst->active || inst->paused) continue;
 
             DecodedPcmEntry* cache = cacheGet(ps2, inst->audoIndex);
-            if (cache == nullptr) continue;
+            if (cache == NULL) continue;
 
             if (inst->positionInt >= inst->totalSamples) {
                 if (inst->loop) {
@@ -448,19 +448,19 @@ static void mixAudio(Ps2AudioSystem* ps2, int16_t* outBuf, int32_t samplePairs) 
 
 // ===[ Vtable Implementations ]===
 
-static void ps2Init(AudioSystem* audio, [[maybe_unused]] DataWin* dataWin, [[maybe_unused]] FileSystem* fileSystem) {
+static void ps2Init(AudioSystem* audio, __attribute__((unused)) DataWin* dataWin, __attribute__((unused)) FileSystem* fileSystem) {
     Ps2AudioSystem* ps2 = (Ps2AudioSystem*) audio;
 
     // Parse sound bank index
     parseSoundBank(ps2);
-    if (ps2->sondEntries == nullptr || ps2->audoEntries == nullptr) {
+    if (ps2->sondEntries == NULL || ps2->audoEntries == NULL) {
         fprintf(stderr, "PS2AudioSystem: Failed to parse SOUNDBNK.BIN, audio disabled\n");
         return;
     }
 
     // Open SOUNDS.BIN for streaming (kept open for on-demand reads)
     openSoundsBin(ps2);
-    if (ps2->soundsFile == nullptr) {
+    if (ps2->soundsFile == NULL) {
         fprintf(stderr, "PS2AudioSystem: Failed to open SOUNDS.BIN, audio disabled\n");
         return;
     }
@@ -468,7 +468,7 @@ static void ps2Init(AudioSystem* audio, [[maybe_unused]] DataWin* dataWin, [[may
     // Initialize LRU cache (all slots empty)
     for (int i = 0; LRU_CACHE_SIZE > i; i++) {
         ps2->cacheEntries[i].audoIndex = -1;
-        ps2->cacheEntries[i].pcmData = nullptr;
+        ps2->cacheEntries[i].pcmData = NULL;
     }
 
     // Initialize sound instances
@@ -511,7 +511,7 @@ static void ps2Destroy(AudioSystem* audio) {
     }
 
     // Close SOUNDS.BIN file handle
-    if (ps2->soundsFile != nullptr) {
+    if (ps2->soundsFile != NULL) {
         fclose(ps2->soundsFile);
     }
 
@@ -622,7 +622,7 @@ static int32_t ps2PlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prio
     if (!isEmbedded) {
         // ===[ Streaming music path ]===
         // Find a free music stream slot
-        Ps2MusicStream* stream = nullptr;
+        Ps2MusicStream* stream = NULL;
         int streamSlot = -1;
         repeat(MAX_MUSIC_STREAMS, i) {
             if (!ps2->musicStreams[i].active) {
@@ -632,7 +632,7 @@ static int32_t ps2PlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prio
             }
         }
 
-        if (stream == nullptr) {
+        if (stream == NULL) {
             // fprintf(stderr, "PS2AudioSystem: No free music stream slots for sound %" PRId32 "\n", soundIndex);
             return -1;
         }
@@ -680,9 +680,9 @@ static int32_t ps2PlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prio
     // ===[ Cached SFX path ]===
     // Ensure decoded PCM is in cache
     DecodedPcmEntry* cached = cacheGet(ps2, sond->audoIndex);
-    if (cached == nullptr) {
+    if (cached == NULL) {
         cached = cacheInsert(ps2, sond->audoIndex);
-        if (cached == nullptr) {
+        if (cached == NULL) {
             // fprintf(stderr, "PS2AudioSystem: Failed to cache decoded audio for sound %" PRId32 "\n", soundIndex);
             return -1;
         }
@@ -690,7 +690,7 @@ static int32_t ps2PlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prio
 
     // Find a free SFX instance slot
     Ps2SoundInstance* slot = findFreeSlot(ps2);
-    if (slot == nullptr) {
+    if (slot == NULL) {
         // fprintf(stderr, "PS2AudioSystem: No free sound slots for sound %" PRId32 "\n", soundIndex);
         return -1;
     }
@@ -734,43 +734,43 @@ static void forEachInstance(Ps2AudioSystem* ps2, int32_t soundOrInstance, Instan
     if (soundOrInstance >= PS2_SOUND_INSTANCE_ID_BASE) {
         // Lookup by instance ID
         Ps2SoundInstance* sfx = findSfxInstanceById(ps2, soundOrInstance);
-        if (sfx != nullptr) {
-            action(sfx, nullptr, userData);
+        if (sfx != NULL) {
+            action(sfx, NULL, userData);
             return;
         }
         Ps2MusicStream* music = findMusicStreamById(ps2, soundOrInstance);
-        if (music != nullptr) {
-            action(nullptr, music, userData);
+        if (music != NULL) {
+            action(NULL, music, userData);
             return;
         }
     } else {
         // Lookup by sound index -- apply to all matching
         repeat(MAX_PS2_SOUND_INSTANCES, i) {
             if (ps2->instances[i].active && ps2->instances[i].soundIndex == soundOrInstance) {
-                action(&ps2->instances[i], nullptr, userData);
+                action(&ps2->instances[i], NULL, userData);
             }
         }
         repeat(MAX_MUSIC_STREAMS, i) {
             if (ps2->musicStreams[i].active && ps2->musicStreams[i].soundIndex == soundOrInstance) {
-                action(nullptr, &ps2->musicStreams[i], userData);
+                action(NULL, &ps2->musicStreams[i], userData);
             }
         }
     }
 }
 
-static void actionStop(Ps2SoundInstance* sfx, Ps2MusicStream* music, [[maybe_unused]] void* userData) {
-    if (sfx != nullptr) sfx->active = false;
-    if (music != nullptr) music->active = false;
+static void actionStop(Ps2SoundInstance* sfx, Ps2MusicStream* music, __attribute__((unused)) void* userData) {
+    if (sfx != NULL) sfx->active = false;
+    if (music != NULL) music->active = false;
 }
 
-static void actionPause(Ps2SoundInstance* sfx, Ps2MusicStream* music, [[maybe_unused]] void* userData) {
-    if (sfx != nullptr) sfx->paused = true;
-    if (music != nullptr) music->paused = true;
+static void actionPause(Ps2SoundInstance* sfx, Ps2MusicStream* music, __attribute__((unused)) void* userData) {
+    if (sfx != NULL) sfx->paused = true;
+    if (music != NULL) music->paused = true;
 }
 
-static void actionResume(Ps2SoundInstance* sfx, Ps2MusicStream* music, [[maybe_unused]] void* userData) {
-    if (sfx != nullptr) sfx->paused = false;
-    if (music != nullptr) music->paused = false;
+static void actionResume(Ps2SoundInstance* sfx, Ps2MusicStream* music, __attribute__((unused)) void* userData) {
+    if (sfx != NULL) sfx->paused = false;
+    if (music != NULL) music->paused = false;
 }
 
 typedef struct {
@@ -783,7 +783,7 @@ static void actionSetGain(Ps2SoundInstance* sfx, Ps2MusicStream* music, void* us
     float gain = params->gain;
     uint32_t timeMs = params->timeMs;
 
-    if (sfx != nullptr) {
+    if (sfx != NULL) {
         if (timeMs == 0) {
             sfx->currentGain = gain;
             sfx->targetGain = gain;
@@ -795,7 +795,7 @@ static void actionSetGain(Ps2SoundInstance* sfx, Ps2MusicStream* music, void* us
             sfx->fadeTimeRemaining = sfx->fadeTotalTime;
         }
     }
-    if (music != nullptr) {
+    if (music != NULL) {
         if (timeMs == 0) {
             music->currentGain = gain;
             music->targetGain = gain;
@@ -811,15 +811,15 @@ static void actionSetGain(Ps2SoundInstance* sfx, Ps2MusicStream* music, void* us
 
 static void actionSetPitch(Ps2SoundInstance* sfx, Ps2MusicStream* music, void* userData) {
     float pitch = *(float*) userData;
-    if (sfx != nullptr) sfx->pitch = pitch;
-    if (music != nullptr) music->pitch = pitch;
+    if (sfx != NULL) sfx->pitch = pitch;
+    if (music != NULL) music->pitch = pitch;
 }
 
 // ===[ Vtable: Stop/Pause/Resume/Gain/Pitch ]===
 
 static void ps2StopSound(AudioSystem* audio, int32_t soundOrInstance) {
     // fprintf(stderr, "PS2AudioSystem: Stopping sound %d\n", soundOrInstance);
-    forEachInstance((Ps2AudioSystem*) audio, soundOrInstance, actionStop, nullptr);
+    forEachInstance((Ps2AudioSystem*) audio, soundOrInstance, actionStop, NULL);
 }
 
 static void ps2StopAll(AudioSystem* audio) {
@@ -838,9 +838,9 @@ static bool ps2IsPlaying(AudioSystem* audio, int32_t soundOrInstance) {
 
     if (soundOrInstance >= PS2_SOUND_INSTANCE_ID_BASE) {
         Ps2SoundInstance* sfx = findSfxInstanceById(ps2, soundOrInstance);
-        if (sfx != nullptr) return !sfx->paused;
+        if (sfx != NULL) return !sfx->paused;
         Ps2MusicStream* music = findMusicStreamById(ps2, soundOrInstance);
-        if (music != nullptr) return !music->paused;
+        if (music != NULL) return !music->paused;
         return false;
     } else {
         repeat(MAX_PS2_SOUND_INSTANCES, i) {
@@ -857,12 +857,12 @@ static bool ps2IsPlaying(AudioSystem* audio, int32_t soundOrInstance) {
 
 static void ps2PauseSound(AudioSystem* audio, int32_t soundOrInstance) {
     // fprintf(stderr, "PS2AudioSystem: Pausing sound %d\n", soundOrInstance);
-    forEachInstance((Ps2AudioSystem*) audio, soundOrInstance, actionPause, nullptr);
+    forEachInstance((Ps2AudioSystem*) audio, soundOrInstance, actionPause, NULL);
 }
 
 static void ps2ResumeSound(AudioSystem* audio, int32_t soundOrInstance) {
     // fprintf(stderr, "PS2AudioSystem: Resuming sound %d\n", soundOrInstance);
-    forEachInstance((Ps2AudioSystem*) audio, soundOrInstance, actionResume, nullptr);
+    forEachInstance((Ps2AudioSystem*) audio, soundOrInstance, actionResume, NULL);
 }
 
 static void ps2PauseAll(AudioSystem* audio) {
@@ -896,9 +896,9 @@ static float ps2GetSoundGain(AudioSystem* audio, int32_t soundOrInstance) {
     Ps2AudioSystem* ps2 = (Ps2AudioSystem*) audio;
     if (soundOrInstance >= PS2_SOUND_INSTANCE_ID_BASE) {
         Ps2SoundInstance* sfx = findSfxInstanceById(ps2, soundOrInstance);
-        if (sfx != nullptr) return sfx->currentGain;
+        if (sfx != NULL) return sfx->currentGain;
         Ps2MusicStream* music = findMusicStreamById(ps2, soundOrInstance);
-        if (music != nullptr) return music->currentGain;
+        if (music != NULL) return music->currentGain;
     } else {
         repeat(MAX_PS2_SOUND_INSTANCES, i) {
             if (ps2->instances[i].active && ps2->instances[i].soundIndex == soundOrInstance) return ps2->instances[i].currentGain;
@@ -919,9 +919,9 @@ static float ps2GetSoundPitch(AudioSystem* audio, int32_t soundOrInstance) {
     Ps2AudioSystem* ps2 = (Ps2AudioSystem*) audio;
     if (soundOrInstance >= PS2_SOUND_INSTANCE_ID_BASE) {
         Ps2SoundInstance* sfx = findSfxInstanceById(ps2, soundOrInstance);
-        if (sfx != nullptr) return sfx->pitch;
+        if (sfx != NULL) return sfx->pitch;
         Ps2MusicStream* music = findMusicStreamById(ps2, soundOrInstance);
-        if (music != nullptr) return music->pitch;
+        if (music != NULL) return music->pitch;
     } else {
         repeat(MAX_PS2_SOUND_INSTANCES, i) {
             if (ps2->instances[i].active && ps2->instances[i].soundIndex == soundOrInstance) return ps2->instances[i].pitch;
@@ -938,11 +938,11 @@ static float ps2GetTrackPosition(AudioSystem* audio, int32_t soundOrInstance) {
 
     if (soundOrInstance >= PS2_SOUND_INSTANCE_ID_BASE) {
         Ps2SoundInstance* sfx = findSfxInstanceById(ps2, soundOrInstance);
-        if (sfx != nullptr && sfx->audoIndex < ps2->audoEntryCount) {
+        if (sfx != NULL && sfx->audoIndex < ps2->audoEntryCount) {
             return (float) sfx->positionInt / (float) ps2->audoEntries[sfx->audoIndex].sampleRate;
         }
         Ps2MusicStream* music = findMusicStreamById(ps2, soundOrInstance);
-        if (music != nullptr && music->audoIndex < ps2->audoEntryCount) {
+        if (music != NULL && music->audoIndex < ps2->audoEntryCount) {
             // Approximate: bytes consumed from file, converted to samples, then to seconds
             uint32_t bytesConsumed = music->fileOffset - music->fileStartOffset;
             uint32_t samplesConsumed = bytesConsumed * 2; // IMA ADPCM: 2 samples/byte
@@ -974,7 +974,7 @@ static void ps2SetTrackPosition(AudioSystem* audio, int32_t soundOrInstance, flo
     // SFX track position
     if (soundOrInstance >= PS2_SOUND_INSTANCE_ID_BASE) {
         Ps2SoundInstance* sfx = findSfxInstanceById(ps2, soundOrInstance);
-        if (sfx != nullptr && sfx->audoIndex < ps2->audoEntryCount) {
+        if (sfx != NULL && sfx->audoIndex < ps2->audoEntryCount) {
             float sampleRate = (float) ps2->audoEntries[sfx->audoIndex].sampleRate;
             sfx->positionInt = (uint32_t) (positionSeconds * sampleRate);
             sfx->positionFrac = 0;
@@ -985,7 +985,7 @@ static void ps2SetTrackPosition(AudioSystem* audio, int32_t soundOrInstance, flo
         }
         // Music stream seek: reset decoder and re-seek
         Ps2MusicStream* music = findMusicStreamById(ps2, soundOrInstance);
-        if (music != nullptr && music->audoIndex < ps2->audoEntryCount) {
+        if (music != NULL && music->audoIndex < ps2->audoEntryCount) {
             float sampleRate = (float) ps2->audoEntries[music->audoIndex].sampleRate;
             uint32_t targetSample = (uint32_t) (positionSeconds * sampleRate);
             // Convert sample position to ADPCM byte offset (2 samples per byte)
@@ -1029,24 +1029,24 @@ static void ps2SetMasterGain(AudioSystem* audio, float gain) {
     ps2->masterGain = gain;
 }
 
-static void ps2SetChannelCount([[maybe_unused]] AudioSystem* audio, [[maybe_unused]] int32_t count) {
+static void ps2SetChannelCount(__attribute__((unused)) AudioSystem* audio, __attribute__((unused)) int32_t count) {
     // No-op: software mixer handles all channels internally
 }
 
-static void ps2GroupLoad([[maybe_unused]] AudioSystem* audio, [[maybe_unused]] int32_t groupIndex) {
+static void ps2GroupLoad(__attribute__((unused)) AudioSystem* audio, __attribute__((unused)) int32_t groupIndex) {
     // No-op: all audio is available from SOUNDS.BIN
 }
 
-static bool ps2GroupIsLoaded([[maybe_unused]] AudioSystem* audio, [[maybe_unused]] int32_t groupIndex) {
+static bool ps2GroupIsLoaded(__attribute__((unused)) AudioSystem* audio, __attribute__((unused)) int32_t groupIndex) {
     return true;
 }
 
-static int32_t ps2CreateStream([[maybe_unused]] AudioSystem* audio, [[maybe_unused]] const char* filename) {
+static int32_t ps2CreateStream(__attribute__((unused)) AudioSystem* audio, __attribute__((unused)) const char* filename) {
     fprintf(stderr, "PS2AudioSystem: audio_create_stream not supported\n");
     return -1;
 }
 
-static bool ps2DestroyStream([[maybe_unused]] AudioSystem* audio, [[maybe_unused]] int32_t streamIndex) {
+static bool ps2DestroyStream(__attribute__((unused)) AudioSystem* audio, __attribute__((unused)) int32_t streamIndex) {
     return false;
 }
 

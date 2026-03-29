@@ -3,9 +3,20 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define READ_16(x) __builtin_bswap16(x) 
+#define READ_32(x) __builtin_bswap32(x) 
+#define READ_64(x) __builtin_bswap64(x) 
+#else
+#define READ_16(x) x 
+#define READ_32(x) x 
+#define READ_64(x) x 
+#endif
 
 BinaryReader BinaryReader_create(FILE* file, size_t fileSize) {
-    return (BinaryReader){.file = file, .fileSize = fileSize, .buffer = nullptr, .bufferBase = 0, .bufferSize = 0, .bufferPos = 0};
+    return (BinaryReader){.file = file, .fileSize = fileSize, .buffer = NULL, .bufferBase = 0, .bufferSize = 0, .bufferPos = 0};
 }
 
 void BinaryReader_setBuffer(BinaryReader* reader, uint8_t* buffer, size_t baseOffset, size_t size) {
@@ -16,14 +27,14 @@ void BinaryReader_setBuffer(BinaryReader* reader, uint8_t* buffer, size_t baseOf
 }
 
 void BinaryReader_clearBuffer(BinaryReader* reader) {
-    reader->buffer = nullptr;
+    reader->buffer = NULL;
     reader->bufferBase = 0;
     reader->bufferSize = 0;
     reader->bufferPos = 0;
 }
 
 static void readCheck(BinaryReader* reader, void* dest, size_t bytes) {
-    if (reader->buffer != nullptr) {
+    if (reader->buffer != NULL) {
         if (reader->bufferPos + bytes > reader->bufferSize) {
             size_t absPos = reader->bufferBase + reader->bufferPos;
             fprintf(stderr, "BinaryReader: buffer read error at position 0x%zX (requested %zu bytes, buffer has %zu remaining)\n", absPos, bytes, reader->bufferSize - reader->bufferPos);
@@ -51,43 +62,44 @@ uint8_t BinaryReader_readUint8(BinaryReader* reader) {
 int16_t BinaryReader_readInt16(BinaryReader* reader) {
     int16_t value;
     readCheck(reader, &value, 2);
-    return value;
+    return READ_16(value);
 }
 
 uint16_t BinaryReader_readUint16(BinaryReader* reader) {
     uint16_t value;
     readCheck(reader, &value, 2);
-    return value;
+    return READ_16(value);
 }
 
 int32_t BinaryReader_readInt32(BinaryReader* reader) {
     int32_t value;
     readCheck(reader, &value, 4);
-    return value;
+    return READ_32(value);
 }
 
 uint32_t BinaryReader_readUint32(BinaryReader* reader) {
     uint32_t value;
     readCheck(reader, &value, 4);
-    return value;
+    return READ_32(value);
 }
 
 float BinaryReader_readFloat32(BinaryReader* reader) {
+    uint32_t bits = BinaryReader_readUint32(reader);
     float value;
-    readCheck(reader, &value, 4);
+    memcpy(&value, &bits, 4);
     return value;
 }
 
 uint64_t BinaryReader_readUint64(BinaryReader* reader) {
     uint64_t value;
     readCheck(reader, &value, 8);
-    return value;
+    return READ_64(value);
 }
 
 int64_t BinaryReader_readInt64(BinaryReader* reader) {
     int64_t value;
     readCheck(reader, &value, 8);
-    return value;
+    return READ_64(value);
 }
 
 bool BinaryReader_readBool32(BinaryReader* reader) {
@@ -101,7 +113,7 @@ void BinaryReader_readBytes(BinaryReader* reader, void* dest, size_t count) {
 uint8_t* BinaryReader_readBytesAt(BinaryReader* reader, size_t offset, size_t count) {
     uint8_t* buf = safeMalloc(count);
 
-    if (reader->buffer != nullptr) {
+    if (reader->buffer != NULL) {
         if (offset < reader->bufferBase || offset + count > reader->bufferBase + reader->bufferSize) {
             fprintf(stderr, "BinaryReader: readBytesAt offset 0x%zX+%zu out of buffer range [0x%zX, 0x%zX)\n", offset, count, reader->bufferBase, reader->bufferBase + reader->bufferSize);
             exit(1);
@@ -120,7 +132,7 @@ uint8_t* BinaryReader_readBytesAt(BinaryReader* reader, size_t offset, size_t co
 }
 
 void BinaryReader_skip(BinaryReader* reader, size_t bytes) {
-    if (reader->buffer != nullptr) {
+    if (reader->buffer != NULL) {
         reader->bufferPos += bytes;
         return;
     }
@@ -128,7 +140,7 @@ void BinaryReader_skip(BinaryReader* reader, size_t bytes) {
 }
 
 void BinaryReader_seek(BinaryReader* reader, size_t position) {
-    if (reader->buffer != nullptr) {
+    if (reader->buffer != NULL) {
         if (position < reader->bufferBase || position > reader->bufferBase + reader->bufferSize) {
             fprintf(stderr, "BinaryReader: buffer seek to 0x%zX out of buffer range [0x%zX, 0x%zX]\n", position, reader->bufferBase, reader->bufferBase + reader->bufferSize);
             exit(1);
@@ -145,7 +157,7 @@ void BinaryReader_seek(BinaryReader* reader, size_t position) {
 }
 
 size_t BinaryReader_getPosition(BinaryReader* reader) {
-    if (reader->buffer != nullptr) {
+    if (reader->buffer != NULL) {
         return reader->bufferBase + reader->bufferPos;
     }
     return (size_t) ftell(reader->file);

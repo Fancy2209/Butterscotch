@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "real_type.h"
 
@@ -53,10 +54,10 @@ abort(); \
 _val; \
 })
 
-// Safe allocation macros - check for nullptr and abort with file/line info
+// Safe allocation macros - check for NULL and abort with file/line info
 #define safeMalloc(size) ({ \
     void* _ptr = malloc(size); \
-    if (_ptr == nullptr) { \
+    if (_ptr == NULL) { \
         fprintf(stderr, "FATAL: malloc(%zu) failed at %s:%d\n", (size_t)(size), __FILE__, __LINE__); \
         abort(); \
     } \
@@ -65,7 +66,7 @@ _val; \
 
 #define safeCalloc(count, size) ({ \
     void* _ptr = calloc(count, size); \
-    if (_ptr == nullptr) { \
+    if (_ptr == NULL) { \
         fprintf(stderr, "FATAL: calloc(%zu, %zu) failed at %s:%d\n", (size_t)(count), (size_t)(size), __FILE__, __LINE__); \
         abort(); \
     } \
@@ -74,7 +75,7 @@ _val; \
 
 #define safeRealloc(ptr, size) ({ \
     void* _ptr = realloc(ptr, size); \
-    if (_ptr == nullptr) { \
+    if (_ptr == NULL) { \
         fprintf(stderr, "FATAL: realloc(%zu) failed at %s:%d\n", (size_t)(size), __FILE__, __LINE__); \
         abort(); \
     } \
@@ -83,7 +84,7 @@ _val; \
 
 #define safeMemalign(alignment, size) ({ \
     void* _ptr = memalign(alignment, size); \
-    if (_ptr == nullptr) { \
+    if (_ptr == NULL) { \
         fprintf(stderr, "FATAL: memalign(%zu, %zu) failed at %s:%d\n", (size_t)(alignment), (size_t)(size), __FILE__, __LINE__); \
         abort(); \
     } \
@@ -92,7 +93,7 @@ _val; \
 
 #define safeStrdup(str) ({ \
     char* _ptr = strdup(str); \
-    if (_ptr == nullptr) { \
+    if (_ptr == NULL) { \
         fprintf(stderr, "FATAL: strdup() failed at %s:%d\n", __FILE__, __LINE__); \
         abort(); \
     } \

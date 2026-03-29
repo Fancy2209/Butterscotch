@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 project(butterscotch C)
 
-set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 add_compile_options(-Wall -Wextra)
 
@@ -70,6 +70,10 @@ if(PLATFORM STREQUAL "glfw")
         target_compile_options(butterscotch PRIVATE -fsanitize=address -fno-omit-frame-pointer)
         target_link_options(butterscotch PRIVATE -fsanitize=address)
     endif()
+elseif(PLATFORM STREQUAL "ps3")
+    # stb_imagetab=repositories
+    target_include_directories(butterscotch PUBLIC vendor/stb/image)
+    target_link_libraries(butterscotch simdmath rsx gcm_sys io sysutil rt lv2 m camera gem spurs sysmodule)
 elseif(PLATFORM STREQUAL "ps2")
     # The PS2 EE has a single-precision FPU only, so double is software-emulated
     add_compile_definitions(USE_FLOAT_REALS)

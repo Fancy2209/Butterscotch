@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "rvalue.h"
 #include "stb_ds.h"
 
@@ -68,7 +69,7 @@ static inline void Instance_setSelfVar(Instance* inst, int32_t varID, RValue val
     if (idx >= 0) {
         RValue_free(&inst->selfVars[idx].value);
     }
-    if (val.type == RVALUE_STRING && val.string != nullptr) {
+    if (val.type == RVALUE_STRING && val.string != NULL) {
         val = RValue_makeOwnedString(safeStrdup(val.string));
     }
     hmput(inst->selfVars, varID, val);

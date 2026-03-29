@@ -52,7 +52,7 @@ typedef struct {
     int32_t gmlKey;
 } PadMapping;
 
-static PadMapping* padMappings = nullptr;
+static PadMapping* padMappings = NULL;
 static int padMappingCount = 0;
 
 // Previous frame's button state for detecting press/release edges
@@ -89,7 +89,7 @@ static void drawCreditsText(GSGLOBAL* gs, GSFONTM* fontm) {
 }
 
 // Draws a simple status screen with "Butterscotch" title, optional game name, and a status message (no progress bar)
-// gameName can be nullptr if the game name is not yet known
+// gameName can be NULL if the game name is not yet known
 // Begins a status screen: clears, draws title + optional game name, leaves center align active
 static void beginStatusScreen(GSGLOBAL* gs, GSFONTM* fontm, const char* gameName) {
     gsKit_clear(gs, GS_SETREG_RGBAQ(0x00, 0x00, 0x00, 0x80, 0x00));
@@ -277,20 +277,20 @@ int main(int argc, char* argv[]) {
     gsFontM->Spacing = 0.95f;
 
     // ===[ Initialize Controller ]===
-    drawStatusScreen(gsGlobal, gsFontM, nullptr, "Initializing controller...", nullptr);
+    drawStatusScreen(gsGlobal, gsFontM, NULL, "Initializing controller...", NULL);
 
     int ret;
-    ret = SifExecModuleBuffer(sio2man_irx, size_sio2man_irx, 0, nullptr, nullptr);
+    ret = SifExecModuleBuffer(sio2man_irx, size_sio2man_irx, 0, NULL, NULL);
     if (0 > ret) {
         printf("Failed to load sio2man: %d\n", ret);
         return 1;
     }
-    ret = SifExecModuleBuffer(mcman_irx, size_mcman_irx, 0, nullptr, nullptr);
+    ret = SifExecModuleBuffer(mcman_irx, size_mcman_irx, 0, NULL, NULL);
     if (0 > ret) {
         printf("Failed to load mcman: %d\n", ret);
         return 1;
     }
-    ret = SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, nullptr, nullptr);
+    ret = SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, NULL, NULL);
     if (0 > ret) {
         printf("Failed to load mcserv: %d\n", ret);
         return 1;
@@ -300,7 +300,7 @@ int main(int argc, char* argv[]) {
         printf("Failed to init libmc: %d\n", ret);
         return 1;
     }
-    ret = SifExecModuleBuffer(padman_irx, size_padman_irx, 0, nullptr, nullptr);
+    ret = SifExecModuleBuffer(padman_irx, size_padman_irx, 0, NULL, NULL);
     if (0 > ret) {
         printf("Failed to load padman: %d\n", ret);
         return 1;
@@ -310,17 +310,17 @@ int main(int argc, char* argv[]) {
     padPortOpen(0, 0, padBuf);
 
     // ===[ Load Audio IOP Modules ]===
-    ret = SifExecModuleBuffer(freesd_irx, size_freesd_irx, 0, nullptr, nullptr);
+    ret = SifExecModuleBuffer(freesd_irx, size_freesd_irx, 0, NULL, NULL);
     if (0 > ret) {
         printf("Failed to load freesd: %d\n", ret);
     }
-    ret = SifExecModuleBuffer(audsrv_irx, size_audsrv_irx, 0, nullptr, nullptr);
+    ret = SifExecModuleBuffer(audsrv_irx, size_audsrv_irx, 0, NULL, NULL);
     if (0 > ret) {
         printf("Failed to load audsrv: %d\n", ret);
     }
 
     // Wait for pad to be ready
-    drawStatusScreen(gsGlobal, gsFontM, nullptr, "Waiting for controller...", nullptr);
+    drawStatusScreen(gsGlobal, gsFontM, NULL, "Waiting for controller...", NULL);
 
     int padState;
     do {
@@ -336,7 +336,7 @@ int main(int argc, char* argv[]) {
     };
 
     // ===[ Parse data.win ]===
-    drawStatusScreen(gsGlobal, gsFontM, nullptr, "Loading data.win...", nullptr);
+    drawStatusScreen(gsGlobal, gsFontM, NULL, "Loading data.win...", NULL);
 
     DataWin* dataWin = DataWin_parse(
         dataWinPath,
@@ -389,9 +389,9 @@ int main(int argc, char* argv[]) {
 
     char* configJsonPath = PS2Utils_createDevicePath("CONFIG.JSN");
     FILE* configFile = fopen(configJsonPath, "rb");
-    JsonValue* configRoot = nullptr;
+    JsonValue* configRoot = NULL;
 
-    if (configFile != nullptr) {
+    if (configFile != NULL) {
         fseek(configFile, 0, SEEK_END);
         long configSize = ftell(configFile);
         fseek(configFile, 0, SEEK_SET);
@@ -406,13 +406,13 @@ int main(int argc, char* argv[]) {
     }
     free(configJsonPath);
 
-    if (configRoot == nullptr) {
+    if (configRoot == NULL) {
         drawStatusScreen(gsGlobal, gsFontM, dataWin->gen8.displayName, "CONFIG.JSN invalid or not found!", &loadingState);
         while (true) {}
     }
 
     FileSystem* fileSystem = Ps2FileSystem_create(configRoot, dataWin->gen8.displayName);
-    if (fileSystem == nullptr) {
+    if (fileSystem == NULL) {
         drawStatusScreen(gsGlobal, gsFontM, dataWin->gen8.displayName, "CONFIG.JSN is missing the fileSystem configuration!", &loadingState);
         while (true) {}
     }
@@ -422,12 +422,12 @@ int main(int argc, char* argv[]) {
 
     // Parse disabledObjects from CONFIG.JSN
     JsonValue* disabledObjectsArr = JsonReader_getObject(configRoot, "disabledObjects");
-    if (disabledObjectsArr != nullptr && JsonReader_isArray(disabledObjectsArr)) {
+    if (disabledObjectsArr != NULL && JsonReader_isArray(disabledObjectsArr)) {
         sh_new_strdup(runner->disabledObjects);
         int disabledCount = JsonReader_arrayLength(disabledObjectsArr);
         repeat(disabledCount, i) {
             JsonValue* elem = JsonReader_getArrayElement(disabledObjectsArr, i);
-            if (elem != nullptr && JsonReader_isString(elem)) {
+            if (elem != NULL && JsonReader_isString(elem)) {
                 const char* objName = JsonReader_getString(elem);
                 shput(runner->disabledObjects, objName, 1);
                 printf("Disabled object: %s\n", objName);
@@ -439,7 +439,7 @@ int main(int argc, char* argv[]) {
     // When true, Runner_draw runs once after all catch-up Runner_step calls (old behavior) instead of running immediately after each Runner_step (new behavior)
     bool deferDrawToAfterAllSteps = false;
     JsonValue* deferDrawVal = JsonReader_getObject(configRoot, "deferDrawToAfterAllSteps");
-    if (deferDrawVal != nullptr) {
+    if (deferDrawVal != NULL) {
         deferDrawToAfterAllSteps = JsonReader_getBool(deferDrawVal);
         if (deferDrawToAfterAllSteps) {
             printf("CONFIG.JSN: deferDrawToAfterAllSteps = true (draw once after all steps)\n");
@@ -448,7 +448,7 @@ int main(int argc, char* argv[]) {
 
     // Parse controllerMappings from CONFIG.JSN
     JsonValue* controllerMappingsObj = JsonReader_getObject(configRoot, "controllerMappings");
-    if (controllerMappingsObj != nullptr && JsonReader_isObject(controllerMappingsObj)) {
+    if (controllerMappingsObj != NULL && JsonReader_isObject(controllerMappingsObj)) {
         padMappingCount = JsonReader_objectLength(controllerMappingsObj);
         padMappings = safeMalloc(sizeof(PadMapping) * padMappingCount);
         repeat(padMappingCount, i) {
@@ -791,7 +791,7 @@ int main(int argc, char* argv[]) {
     }
 
     runner->audioSystem->vtable->destroy(runner->audioSystem);
-    runner->audioSystem = nullptr;
+    runner->audioSystem = NULL;
     renderer->vtable->destroy(renderer);
     DataWin_free(dataWin);
 

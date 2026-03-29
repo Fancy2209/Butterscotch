@@ -47,14 +47,14 @@ static const char* fragmentShaderSource =
 
 static GLuint compileShader(GLenum type, const char* source) {
     GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, nullptr);
+    glShaderSource(shader, 1, &source, NULL);
     glCompileShader(shader);
 
     GLint success;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
         char infoLog[512];
-        glGetShaderInfoLog(shader, sizeof(infoLog), nullptr, infoLog);
+        glGetShaderInfoLog(shader, sizeof(infoLog), NULL, infoLog);
         fprintf(stderr, "GL: Shader compilation failed: %s\n", infoLog);
         abort();
     }
@@ -71,7 +71,7 @@ static GLuint linkProgram(GLuint vertShader, GLuint fragShader) {
     glGetProgramiv(program, GL_LINK_STATUS, &success);
     if (!success) {
         char infoLog[512];
-        glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
+        glGetProgramInfoLog(program, sizeof(infoLog), NULL, infoLog);
         fprintf(stderr, "GL: Shader linking failed: %s\n", infoLog);
         abort();
     }
@@ -90,7 +90,7 @@ static void flushBatch(GLRenderer* gl) {
     glBufferSubData(GL_ARRAY_BUFFER, 0, vertexCount * FLOATS_PER_VERTEX * sizeof(float), gl->vertexData);
 
     glBindTexture(GL_TEXTURE_2D, gl->currentTextureId);
-    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, NULL);
 
     gl->quadCount = 0;
 }
@@ -121,7 +121,7 @@ static void glInit(Renderer* renderer, DataWin* dataWin) {
     // VBO: sized for max quads
     int32_t vboSize = MAX_QUADS * VERTICES_PER_QUAD * FLOATS_PER_VERTEX * (int32_t) sizeof(float);
     glBindBuffer(GL_ARRAY_BUFFER, gl->vbo);
-    glBufferData(GL_ARRAY_BUFFER, vboSize, nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vboSize, NULL, GL_DYNAMIC_DRAW);
 
     // EBO: pre-fill with quad index pattern (0,1,2,2,3,0 repeated)
     int32_t eboSize = MAX_QUADS * INDICES_PER_QUAD * (int32_t) sizeof(uint32_t);
@@ -168,7 +168,7 @@ static void glInit(Renderer* renderer, DataWin* dataWin) {
 
         int w, h, channels;
         uint8_t* pixels = stbi_load_from_memory(pngData, (int) pngSize, &w, &h, &channels, 4);
-        if (pixels == nullptr) {
+        if (pixels == NULL) {
             fprintf(stderr, "GL: Failed to decode TXTR page %u\n", i);
             gl->textureWidths[i] = 0;
             gl->textureHeights[i] = 0;
@@ -254,7 +254,7 @@ static void glBeginFrame(Renderer* renderer, int32_t gameW, int32_t gameH, int32
 
         glGenTextures(1, &gl->fboTexture);
         glBindTexture(GL_TEXTURE_2D, gl->fboTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gameW, gameH, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gameW, gameH, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -728,7 +728,7 @@ static void glDrawText(Renderer* renderer, const char* text, float x, float y, f
         while (lineLen > pos) {
             uint16_t ch = TextUtils_decodeUtf8(text + lineStart, lineLen, &pos);
             FontGlyph* glyph = TextUtils_findGlyph(font, ch);
-            if (glyph == nullptr) continue;
+            if (glyph == NULL) continue;
             if (glyph->sourceWidth == 0 || glyph->sourceHeight == 0) {
                 cursorX += glyph->shift;
                 continue;
@@ -895,7 +895,7 @@ static void glDrawTextColor(Renderer* renderer, const char* text, float x, float
 
             uint16_t ch = TextUtils_decodeUtf8(processed + lineStart, lineLen, &pos);
             FontGlyph* glyph = TextUtils_findGlyph(font, ch);
-            if (glyph == nullptr) continue;
+            if (glyph == NULL) continue;
             if (glyph->sourceWidth == 0 || glyph->sourceHeight == 0) {
                 cursorX += glyph->shift;
                 continue;
@@ -1031,7 +1031,7 @@ static int32_t glCreateSpriteFromSurface(Renderer* renderer, int32_t x, int32_t 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gl->fbo);
 
     uint8_t* pixels = safeMalloc((size_t) w * (size_t) h * 4);
-    if (pixels == nullptr) return -1;
+    if (pixels == NULL) return -1;
 
     // OpenGL Y is bottom-up, GML Y is top-down, so flip the Y coordinate
     int32_t glY = gl->fboHeight - y - h;
@@ -1096,7 +1096,7 @@ static int32_t glCreateSpriteFromSurface(Renderer* renderer, int32_t x, int32_t 
     sprite->textureOffsets = safeMalloc(sizeof(uint32_t));
     sprite->textureOffsets[0] = fakeOffset;
     sprite->maskCount = 0;
-    sprite->masks = nullptr;
+    sprite->masks = NULL;
 
     fprintf(stderr, "GL: Created dynamic sprite %u (%dx%d) from surface at (%d,%d)\n", spriteIndex, w, h, x, y);
     return (int32_t) spriteIndex;
@@ -1164,7 +1164,7 @@ static RendererVtable glVtable = {
     .flush = glRendererFlush,
     .createSpriteFromSurface = glCreateSpriteFromSurface,
     .deleteSprite = glDeleteSprite,
-    .drawTile = nullptr,
+    .drawTile = NULL,
 };
 
 // ===[ Public API ]===

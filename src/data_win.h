@@ -199,7 +199,7 @@ typedef struct {
     uint32_t textureCount;
     uint32_t* textureOffsets; // absolute file offsets to TexturePageItems
     uint32_t maskCount;       // number of collision masks (one per frame, or 0)
-    uint8_t** masks;          // array of maskCount packed bit arrays (nullptr if none)
+    uint8_t** masks;          // array of maskCount packed bit arrays (NULL if none)
 } Sprite;
 
 typedef struct {
@@ -507,7 +507,7 @@ typedef struct {
     uint32_t color;
 } RoomTile;
 
-enum RoomLayerType : uint32_t
+enum RoomLayerType
 {
     RoomLayerType_Path = 0,
     RoomLayerType_Background = 1,

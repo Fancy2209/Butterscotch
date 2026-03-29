@@ -5,6 +5,7 @@
 #include "vm.h"
 
 #include <math.h>
+#include <stdbool.h>
 
 // Checks if an instance matches a collision target.
 // target >= 100000: instance ID (match specific instance)
@@ -24,14 +25,14 @@ typedef struct {
 // Returns the collision sprite for an instance (mask sprite if set, else display sprite)
 static inline Sprite* Collision_getSprite(DataWin* dataWin, Instance* inst) {
     int32_t sprIdx = (inst->maskIndex >= 0) ? inst->maskIndex : inst->spriteIndex;
-    if (0 > sprIdx || (uint32_t) sprIdx >= dataWin->sprt.count) return nullptr;
+    if (0 > sprIdx || (uint32_t) sprIdx >= dataWin->sprt.count) return NULL;
     return &dataWin->sprt.sprites[sprIdx];
 }
 
 // Computes the axis-aligned bounding box for an instance using its collision sprite
 static inline InstanceBBox Collision_computeBBox(DataWin* dataWin, Instance* inst) {
     Sprite* spr = Collision_getSprite(dataWin, inst);
-    if (spr == nullptr) return (InstanceBBox){0, 0, 0, 0, false};
+    if (spr == NULL) return (InstanceBBox){0, 0, 0, 0, false};
 
     GMLReal marginL = (GMLReal) spr->marginLeft;
     GMLReal marginR = (GMLReal) (spr->marginRight + 1);
@@ -91,7 +92,7 @@ static inline InstanceBBox Collision_computeBBox(DataWin* dataWin, Instance* ins
 
 // Tests if point (px, py) hits the instance's precise collision mask
 static inline bool Collision_pointInMask(Sprite* spr, Instance* inst, GMLReal px, GMLReal py) {
-    if (spr->masks == nullptr || spr->maskCount == 0) return true; // no mask = all solid
+    if (spr->masks == NULL || spr->maskCount == 0) return true; // no mask = all solid
 
     // Pick mask for current frame
     uint32_t frameIdx = ((uint32_t) inst->imageIndex) % spr->maskCount;
@@ -139,8 +140,8 @@ static inline bool Collision_instancesOverlapPrecise(DataWin* dataWin, Instance*
     Sprite* sprA = Collision_getSprite(dataWin, a);
     Sprite* sprB = Collision_getSprite(dataWin, b);
 
-    bool preciseA = (sprA != nullptr && sprA->sepMasks == 1 && sprA->masks != nullptr && sprA->maskCount > 0);
-    bool preciseB = (sprB != nullptr && sprB->sepMasks == 1 && sprB->masks != nullptr && sprB->maskCount > 0);
+    bool preciseA = (sprA != NULL && sprA->sepMasks == 1 && sprA->masks != NULL && sprA->maskCount > 0);
+    bool preciseB = (sprB != NULL && sprB->sepMasks == 1 && sprB->masks != NULL && sprB->maskCount > 0);
 
     // If neither needs precise, bbox overlap is sufficient
     if (!preciseA && !preciseB) return true;

@@ -2,6 +2,7 @@
 
 #include "audio_system.h"
 #include "miniaudio.h"
+#include <stdbool.h>
 
 #define MAX_SOUND_INSTANCES 128
 #define SOUND_INSTANCE_ID_BASE 100000

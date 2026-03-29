@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include "vm.h"
 
 typedef RValue (*BuiltinFunc)(VMContext* ctx, RValue* args, int32_t argCount);

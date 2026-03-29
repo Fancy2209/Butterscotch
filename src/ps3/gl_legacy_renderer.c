@@ -1,8 +1,9 @@
+#include "ps3gl.h"
+#include "rsxutil.h"
 #include "gl_legacy_renderer.h"
 #include "matrix_math.h"
 #include "text_utils.h"
 
-#include <glad/glad.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,7 @@
 static void glInit(Renderer* renderer, DataWin* dataWin) {
     GLLegacyRenderer* gl = (GLLegacyRenderer*) renderer;
     renderer->dataWin = dataWin;
+    ps3glInit();
 
     // Load textures from TXTR pages
     glEnable(GL_TEXTURE_2D);
@@ -144,7 +146,7 @@ static void glBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_
     glLoadMatrixf(projection.m);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glActiveTexture(GL_TEXTURE0);
+    //glActiveTexture(GL_TEXTURE0);
 }
 
 static void glEndView(Renderer* renderer) {
@@ -816,14 +818,15 @@ static int32_t glCreateSpriteFromSurface(Renderer* renderer, int32_t x, int32_t 
     if (0 >= w || 0 >= h) return -1;
 
     // Read pixels from the FBO (application_surface)
-    glReadBuffer(GL_BACK);
+    //glReadBuffer(GL_BACK);
 
     uint8_t* pixels = safeMalloc((size_t) w * (size_t) h * 4);
     if (pixels == NULL) return -1;
 
     // OpenGL Y is bottom-up, GML Y is top-down, so flip the Y coordinate
     int32_t glY = gl->gameH - y - h;
-    glReadPixels(x, glY, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    //glReadPixels(x, glY, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    memcpy(pixels, color_buffer[curr_fb ^ 1], display_height*color_pitch);
 
     // Flip vertically (OpenGL reads bottom-to-top)
     size_t rowBytes = (size_t) w * 4;

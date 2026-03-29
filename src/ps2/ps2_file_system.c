@@ -143,7 +143,7 @@ static void generateIconSys(uint8_t* buffer, const char* gameTitle, const SaveIc
 // Copies a file from src to dst (binary). Returns true on success.
 static bool copyFile(const char* srcPath, const char* dstPath) {
     FILE* src = fopen(srcPath, "rb");
-    if (src == nullptr)
+    if (src == NULL)
         return false;
 
     fseek(src, 0, SEEK_END);
@@ -155,7 +155,7 @@ static bool copyFile(const char* srcPath, const char* dstPath) {
     fclose(src);
 
     FILE* dst = fopen(dstPath, "wb");
-    if (dst == nullptr) {
+    if (dst == NULL) {
         free(data);
         return false;
     }
@@ -175,7 +175,7 @@ static void copyIconIcoIfMissing(const char* dirPath) {
 
     // Check if it already exists on the memory card
     FILE* check = fopen(dstPath, "rb");
-    if (check != nullptr) {
+    if (check != NULL) {
         fclose(check);
         free(dstPath);
         return;
@@ -203,7 +203,7 @@ static void writeIconSysIfMissing(const char* dirPath, const char* gameTitle, co
 
     // Check if it already exists
     FILE* check = fopen(iconSysPath, "rb");
-    if (check != nullptr) {
+    if (check != NULL) {
         fclose(check);
         free(iconSysPath);
         return;
@@ -214,7 +214,7 @@ static void writeIconSysIfMissing(const char* dirPath, const char* gameTitle, co
     generateIconSys(buffer, gameTitle, config);
 
     FILE* f = fopen(iconSysPath, "wb");
-    if (f != nullptr) {
+    if (f != NULL) {
         fwrite(buffer, 1, ICON_SYS_SIZE, f);
         fclose(f);
         fprintf(stderr, "Ps2FileSystem: Created icon.sys in %s\n", dirPath);
@@ -234,7 +234,7 @@ static void ensureParentDirectory(Ps2FileSystem* pfs, const char* path) {
 
     char* pathCopy = safeStrdup(path);
     char* lastSlash = strrchr(pathCopy, '/');
-    if (lastSlash != nullptr && lastSlash != pathCopy) {
+    if (lastSlash != NULL && lastSlash != pathCopy) {
         *lastSlash = '\0';
         mkdir(pathCopy, 0777);
         writeIconSysIfMissing(pathCopy, pfs->gameTitle, &pfs->saveIconConfig);
@@ -249,13 +249,13 @@ static char* resolvePath(FileSystem* fs, const char* relativePath) {
     Ps2FileSystem* pfs = (Ps2FileSystem*) fs;
     ptrdiff_t idx = shgeti(pfs->mappings, relativePath);
     if (0 > idx)
-        return nullptr;
+        return NULL;
 
     // Return the first mapped path
     if (arrlen(pfs->mappings[idx].value) > 0)
         return safeStrdup(pfs->mappings[idx].value[0]);
 
-    return nullptr;
+    return NULL;
 }
 
 static bool fileExists(FileSystem* fs, const char* relativePath) {
@@ -268,7 +268,7 @@ static bool fileExists(FileSystem* fs, const char* relativePath) {
     int pathCount = arrlen(paths);
     repeat(pathCount, i) {
         FILE* f = fopen(paths[i], "rb");
-        if (f != nullptr) {
+        if (f != NULL) {
             fclose(f);
             return true;
         }
@@ -281,7 +281,7 @@ static char* readFileText(FileSystem* fs, const char* relativePath) {
     Ps2FileSystem* pfs = (Ps2FileSystem*) fs;
     ptrdiff_t idx = shgeti(pfs->mappings, relativePath);
     if (0 > idx)
-        return nullptr;
+        return NULL;
 
     // For the PlayStation 2 target, we have multiple "search" paths for a specific file
     // The reason why we do this is because GameMaker allows files to be in two different folders: The save folder and the bundled folder
@@ -290,7 +290,7 @@ static char* readFileText(FileSystem* fs, const char* relativePath) {
     int pathCount = arrlen(paths);
     repeat(pathCount, i) {
         FILE* f = fopen(paths[i], "rb");
-        if (f == nullptr)
+        if (f == NULL)
             continue;
 
         fseek(f, 0, SEEK_END);
@@ -304,7 +304,7 @@ static char* readFileText(FileSystem* fs, const char* relativePath) {
         return content;
     }
 
-    return nullptr;
+    return NULL;
 }
 
 static bool writeFileText(FileSystem* fs, const char* relativePath, const char* contents) {
@@ -322,7 +322,7 @@ static bool writeFileText(FileSystem* fs, const char* relativePath, const char* 
     ensureParentDirectory(pfs, writePath);
 
     FILE* f = fopen(writePath, "wb");
-    if (f == nullptr)
+    if (f == NULL)
         return false;
 
     size_t len = strlen(contents);
@@ -410,13 +410,13 @@ static SaveIconConfig parseSaveIconConfig(JsonValue* configRoot) {
 
 FileSystem* Ps2FileSystem_create(JsonValue* configRoot, const char* gameTitle) {
     JsonValue* fileSystemObj = JsonReader_getObject(configRoot, "fileSystem");
-    require(fileSystemObj != nullptr && JsonReader_isObject(fileSystemObj));
+    require(fileSystemObj != NULL && JsonReader_isObject(fileSystemObj));
 
     Ps2FileSystem* pfs = safeCalloc(1, sizeof(Ps2FileSystem));
     pfs->base.vtable = &ps2FileSystemVtable;
     pfs->gameTitle = safeStrdup(gameTitle);
     pfs->saveIconConfig = parseSaveIconConfig(configRoot);
-    pfs->mappings = nullptr;
+    pfs->mappings = NULL;
     sh_new_strdup(pfs->mappings);
 
     int entryCount = JsonReader_objectLength(fileSystemObj);
@@ -426,7 +426,7 @@ FileSystem* Ps2FileSystem_create(JsonValue* configRoot, const char* gameTitle) {
 
         require(JsonReader_isArray(pathArray));
 
-        char** resolvedPaths = nullptr;
+        char** resolvedPaths = NULL;
         int pathCount = JsonReader_arrayLength(pathArray);
         repeat(pathCount, j) {
             JsonValue* pathElement = JsonReader_getArrayElement(pathArray, j);

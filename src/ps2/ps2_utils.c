@@ -37,13 +37,13 @@ void PS2Utils_loadFSDrivers() {
         fprintf(stderr, "PS2Utils: Loading CDVD drivers for device key '%s'\n", deviceKey.key);
 
         int ret;
-        ret = SifLoadModule("rom0:CDVDMAN", 0, nullptr);
+        ret = SifLoadModule("rom0:CDVDMAN", 0, NULL);
         if (0 > ret) {
             fprintf(stderr, "PS2Utils: Failed to load CDVDMAN: %d\n", ret);
             abort();
         }
 
-        ret = SifLoadModule("rom0:CDVDFSV", 0, nullptr);
+        ret = SifLoadModule("rom0:CDVDFSV", 0, NULL);
         if (0 > ret) {
             fprintf(stderr, "PS2Utils: Failed to load CDVDFSV: %d\n", ret);
             abort();

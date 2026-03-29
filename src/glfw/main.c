@@ -71,42 +71,42 @@ static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) 
     memset(args, 0, sizeof(CommandLineArgs));
 
     static struct option longOptions[] = {
-        {"screenshot",          required_argument, nullptr, 's'},
-        {"screenshot-at-frame", required_argument, nullptr, 'f'},
-        {"headless",            no_argument,       nullptr, 'h'},
-        {"print-rooms", no_argument,               nullptr, 'r'},
-        {"print-declared-functions", no_argument,  nullptr, 'p'},
-        {"trace-variable-reads", required_argument,  nullptr, 'R'},
-        {"trace-variable-writes", required_argument, nullptr, 'W'},
-        {"trace-function-calls", required_argument,         nullptr, 'c'},
-        {"trace-alarms", required_argument,         nullptr, 'a'},
-        {"trace-instance-lifecycles", required_argument,         nullptr, 'l'},
-        {"trace-events", required_argument,         nullptr, 'e'},
-        {"trace-event-inherited", no_argument, nullptr, 'E'},
-        {"trace-tiles", required_argument, nullptr, 'T'},
-        {"trace-opcodes", required_argument,       nullptr, 'o'},
-        {"trace-stack", required_argument,         nullptr, 'S'},
-        {"trace-frames", no_argument, nullptr, 'k'},
-        {"exit-at-frame", required_argument, nullptr, 'x'},
-        {"dump-frame", required_argument, nullptr, 'd'},
-        {"dump-frame-json", required_argument, nullptr, 'j'},
-        {"dump-frame-json-file", required_argument, nullptr, 'J'},
-        {"speed", required_argument, nullptr, 'M'},
-        {"seed", required_argument, nullptr, 'Z'},
-        {"debug", no_argument, nullptr, 'D'},
-        {"disassemble", required_argument, nullptr, 'A'},
-        {"record-inputs", required_argument, nullptr, 'I'},
-        {"playback-inputs", required_argument, nullptr, 'P'},
-        {"legacy-gl", no_argument, nullptr, 'g'},
-        {nullptr,               0,                 nullptr,  0 }
+        {"screenshot",          required_argument, NULL, 's'},
+        {"screenshot-at-frame", required_argument, NULL, 'f'},
+        {"headless",            no_argument,       NULL, 'h'},
+        {"print-rooms", no_argument,               NULL, 'r'},
+        {"print-declared-functions", no_argument,  NULL, 'p'},
+        {"trace-variable-reads", required_argument,  NULL, 'R'},
+        {"trace-variable-writes", required_argument, NULL, 'W'},
+        {"trace-function-calls", required_argument,         NULL, 'c'},
+        {"trace-alarms", required_argument,         NULL, 'a'},
+        {"trace-instance-lifecycles", required_argument,         NULL, 'l'},
+        {"trace-events", required_argument,         NULL, 'e'},
+        {"trace-event-inherited", no_argument, NULL, 'E'},
+        {"trace-tiles", required_argument, NULL, 'T'},
+        {"trace-opcodes", required_argument,       NULL, 'o'},
+        {"trace-stack", required_argument,         NULL, 'S'},
+        {"trace-frames", no_argument, NULL, 'k'},
+        {"exit-at-frame", required_argument, NULL, 'x'},
+        {"dump-frame", required_argument, NULL, 'd'},
+        {"dump-frame-json", required_argument, NULL, 'j'},
+        {"dump-frame-json-file", required_argument, NULL, 'J'},
+        {"speed", required_argument, NULL, 'M'},
+        {"seed", required_argument, NULL, 'Z'},
+        {"debug", no_argument, NULL, 'D'},
+        {"disassemble", required_argument, NULL, 'A'},
+        {"record-inputs", required_argument, NULL, 'I'},
+        {"playback-inputs", required_argument, NULL, 'P'},
+        {"legacy-gl", no_argument, NULL, 'g'},
+        {NULL,               0,                 NULL,  0 }
     };
 
-    args->screenshotFrames = nullptr;
+    args->screenshotFrames = NULL;
     args->exitAtFrame = -1;
     args->speedMultiplier = 1.0;
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "", longOptions, nullptr)) != -1) {
+    while ((opt = getopt_long(argc, argv, "", longOptions, NULL)) != -1) {
         switch (opt) {
             case 's':
                 args->screenshotPattern = optarg;
@@ -246,7 +246,7 @@ static void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) 
 
     args->dataWinPath = argv[optind];
 
-    if (hmlen(args->screenshotFrames) > 0 && args->screenshotPattern == nullptr) {
+    if (hmlen(args->screenshotFrames) > 0 && args->screenshotPattern == NULL) {
         fprintf(stderr, "Error: --screenshot-at-frame requires --screenshot to be set\n");
         exit(1);
     }
@@ -281,7 +281,7 @@ static void captureScreenshot(const char* filenamePattern, int frameNumber, int 
 
     int stride = width * 4;
     unsigned char* pixels = safeMalloc(stride * height);
-    if (pixels == nullptr) {
+    if (pixels == NULL) {
         fprintf(stderr, "Error: Failed to allocate memory for screenshot (%dx%d)\n", width, height);
         return;
     }
@@ -343,7 +343,7 @@ static int32_t glfwKeyToGml(int glfwKey) {
     }
 }
 
-static InputRecording* globalInputRecording = nullptr;
+static InputRecording* globalInputRecording = NULL;
 
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     (void) scancode; (void) mods;
@@ -482,9 +482,9 @@ int main(int argc, char* argv[]) {
     runner->debugMode = args.debug;
 
     // Set up input recording/playback (both can be active: playback then continue recording)
-    if (args.playbackInputsPath != nullptr) {
+    if (args.playbackInputsPath != NULL) {
         globalInputRecording = InputRecording_createPlayer(args.playbackInputsPath, args.recordInputsPath);
-    } else if (args.recordInputsPath != nullptr) {
+    } else if (args.recordInputsPath != NULL) {
         globalInputRecording = InputRecording_createRecorder(args.recordInputsPath);
     }
     shcopyFromTo(args.varReadsToBeTraced, runner->vmContext->varReadsToBeTraced);
@@ -512,8 +512,8 @@ int main(int argc, char* argv[]) {
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
     }
 
-    GLFWwindow* window = glfwCreateWindow((int) gen8->defaultWindowWidth, (int) gen8->defaultWindowHeight, windowTitle, nullptr, nullptr);
-    if (window == nullptr) {
+    GLFWwindow* window = glfwCreateWindow((int) gen8->defaultWindowWidth, (int) gen8->defaultWindowHeight, windowTitle, NULL, NULL);
+    if (window == NULL) {
         fprintf(stderr, "Failed to create GLFW window\n");
         glfwTerminate();
         DataWin_free(dataWin);
@@ -535,7 +535,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Initialize the renderer
-    Renderer* renderer = nullptr;
+    Renderer* renderer = NULL;
     if(args.legacyGL)
         renderer = GLLegacyRenderer_create();
     else
@@ -545,7 +545,7 @@ int main(int argc, char* argv[]) {
     runner->renderer = renderer;
 
     // Initialize the audio system
-    MaAudioSystem* maAudio = nullptr;
+    MaAudioSystem* maAudio = NULL;
     if (!args.headless) {
         maAudio = MaAudioSystem_create();
         AudioSystem* audioSystem = (AudioSystem*) maAudio;
@@ -585,25 +585,40 @@ int main(int argc, char* argv[]) {
             }
 
             // Go to next room
-            if (RunnerKeyboard_checkPressed(runner->keyboard, VK_PAGEUP)) {
-                DataWin* dw = runner->dataWin;
-                if ((int32_t) dw->gen8.roomOrderCount > runner->currentRoomOrderPosition + 1) {
-                    int32_t nextIdx = dw->gen8.roomOrder[runner->currentRoomOrderPosition + 1];
-                    runner->pendingRoom = nextIdx;
-                    runner->audioSystem->vtable->stopAll(runner->audioSystem);
-                    fprintf(stderr, "Debug: Going to next room -> %s\n", dw->room.rooms[nextIdx].name);
+            // Go to previous room
+        if (RunnerKeyboard_checkPressed(runner->keyboard, VK_PAGEDOWN)) {
+            DataWin* dw = runner->dataWin;
+            forEachIndexed(Room, room, i, dw->room.rooms, dw->room.count) {
+                if (strcmp(room->name, "room_cc_joker") == 0) {
+                    runner->pendingRoom = i;
+                    break;
                 }
             }
+        }
 
-            // Go to previous room
-            if (RunnerKeyboard_checkPressed(runner->keyboard, VK_PAGEDOWN)) {
-                DataWin* dw = runner->dataWin;
-                if (runner->currentRoomOrderPosition > 0) {
-                    int32_t prevIdx = dw->gen8.roomOrder[runner->currentRoomOrderPosition - 1];
-                    runner->pendingRoom = prevIdx;
-                    runner->audioSystem->vtable->stopAll(runner->audioSystem);
-                    fprintf(stderr, "Debug: Going to previous room -> %s\n", dw->room.rooms[prevIdx].name);
+        // Reset global interact state because I HATE when I get stuck while moving through rooms
+        if (RunnerKeyboard_checkPressed(runner->keyboard, VK_PAGEUP)) {
+            int32_t interactVarId = shget(runner->vmContext->globalVarNameMap, "interact");
+            int32_t darkzoneVarID = shget(runner->vmContext->globalVarNameMap, "darkzone");
+            int32_t charID = shget(runner->vmContext->globalVarNameMap, "char");
+
+            runner->vmContext->globalVars[interactVarId] = RValue_makeInt32(0);
+            printf("Changed global.interact [%d] value!\n", interactVarId);
+            runner->vmContext->globalVars[darkzoneVarID] = RValue_makeInt32(1);
+            printf("Changed global.darkzone [%d] value!\n", darkzoneVarID);
+            hmput(runner->vmContext->globalArrayMap, ((int64_t) charID << 32) | (uint32_t) 0, RValue_makeInt32(1));
+            printf("Changed global.char[0]!\n");
+            hmput(runner->vmContext->globalArrayMap, ((int64_t) charID << 32) | (uint32_t) 1, RValue_makeInt32(2));
+            printf("Changed global.char[1]!\n");
+            hmput(runner->vmContext->globalArrayMap, ((int64_t) charID << 32) | (uint32_t) 2, RValue_makeInt32(3));
+            printf("Changed global.char[2]!\n");
+            DataWin* dw = runner->dataWin;
+            forEachIndexed(Room, room, i, dw->room.rooms, dw->room.count) {
+                if (strcmp(room->name, "room_dark1") == 0) {
+                    runner->pendingRoom = i;
+                    break;
                 }
+            }
             }
 
             // Dump runner state to console
@@ -616,11 +631,11 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "Debug: Dumping runner state at frame %d\n", runner->frameCount);
                 char* json = Runner_dumpStateJson(runner);
 
-                if (args.dumpJsonFilePattern != nullptr) {
+                if (args.dumpJsonFilePattern != NULL) {
                     char filename[512];
                     snprintf(filename, sizeof(filename), args.dumpJsonFilePattern, runner->frameCount);
                     FILE* f = fopen(filename, "w");
-                    if (f != nullptr) {
+                    if (f != NULL) {
                         fwrite(json, 1, strlen(json), f);
                         fputc('\n', f);
                         fclose(f);
@@ -676,11 +691,11 @@ int main(int argc, char* argv[]) {
             // Dump runner state as JSON if this frame was requested
             if (hmget(args.dumpJsonFrames, runner->frameCount)) {
                 char* json = Runner_dumpStateJson(runner);
-                if (args.dumpJsonFilePattern != nullptr) {
+                if (args.dumpJsonFilePattern != NULL) {
                     char filename[512];
                     snprintf(filename, sizeof(filename), args.dumpJsonFilePattern, runner->frameCount);
                     FILE* f = fopen(filename, "w");
-                    if (f != nullptr) {
+                    if (f != NULL) {
                         fwrite(json, 1, strlen(json), f);
                         fputc('\n', f);
                         fclose(f);
@@ -818,7 +833,7 @@ int main(int argc, char* argv[]) {
                     .tv_sec = 0,
                     .tv_nsec = (long) ((remaining - 0.001) * 1e9)
                 };
-                nanosleep(&ts, nullptr);
+                nanosleep(&ts, NULL);
                 #endif
             }
             while (glfwGetTime() < nextFrameTime) {
@@ -831,17 +846,17 @@ int main(int argc, char* argv[]) {
     }
 
     // Save input recording if active, then free
-    if (globalInputRecording != nullptr) {
+    if (globalInputRecording != NULL) {
         if (globalInputRecording->isRecording) {
             InputRecording_save(globalInputRecording);
         }
         InputRecording_free(globalInputRecording);
-        globalInputRecording = nullptr;
+        globalInputRecording = NULL;
     }
 
     // Cleanup
     runner->audioSystem->vtable->destroy(runner->audioSystem);
-    runner->audioSystem = nullptr;
+    runner->audioSystem = NULL;
     renderer->vtable->destroy(renderer);
 
     glfwDestroyWindow(window);

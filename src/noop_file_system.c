@@ -20,7 +20,7 @@ typedef struct {
 
 // ===[ Vtable Implementations ]===
 
-static char* noopResolvePath([[maybe_unused]] FileSystem* fs, [[maybe_unused]] const char* relativePath) {
+static char* noopResolvePath(__attribute__((unused)) FileSystem* fs, __attribute__((unused)) const char* relativePath) {
     return safeStrdup("./");
 }
 
@@ -33,7 +33,7 @@ static char* noopReadFileText(FileSystem* fs, const char* relativePath) {
     NoopFileSystem* nfs = (NoopFileSystem*) fs;
     ptrdiff_t idx = shgeti(nfs->files, relativePath);
     if (0 > idx)
-        return nullptr;
+        return NULL;
     return safeStrdup(nfs->files[idx].value);
 }
 
@@ -78,7 +78,7 @@ static FileSystemVtable noopFileSystemVtable = {
 FileSystem* NoopFileSystem_create(void) {
     NoopFileSystem* nfs = safeCalloc(1, sizeof(NoopFileSystem));
     nfs->base.vtable = &noopFileSystemVtable;
-    nfs->files = nullptr;
+    nfs->files = NULL;
     sh_new_strdup(nfs->files);
     return (FileSystem*) nfs;
 }

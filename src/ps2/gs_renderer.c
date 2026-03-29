@@ -30,7 +30,7 @@ static uint8_t* loadFileRaw(const char* path, uint32_t* outSize) {
     char* textureBinPath = PS2Utils_createDevicePath(path);
 
     FILE* f = fopen(textureBinPath, "rb");
-    if (f == nullptr) {
+    if (f == NULL) {
         fprintf(stderr, "GsRenderer: Failed to open %s\n", path);
         abort();
     }
@@ -59,7 +59,7 @@ static uint8_t* loadFileRaw(const char* path, uint32_t* outSize) {
 static void loadAtlas(GsRenderer* gs) {
     char* atlasBinPath = PS2Utils_createDevicePath("ATLAS.BIN");
     FILE* f = fopen(atlasBinPath, "rb");
-    if (f == nullptr) {
+    if (f == NULL) {
         fprintf(stderr, "GsRenderer: Failed to open %s\n", atlasBinPath);
         abort();
     }
@@ -434,10 +434,10 @@ static void preloadEeCache(GsRenderer* gs) {
     fprintf(stderr, "GsRenderer: EE cache initialized - %u MB, %u atlases preloaded (%u KB used)\n", EE_CACHE_CAPACITY / (1024 * 1024), preloaded, gs->eeCacheBumpPtr / 1024);
 }
 
-// Look up an atlas in the EE cache. Returns pointer to cached data or nullptr.
+// Look up an atlas in the EE cache. Returns pointer to cached data or NULL.
 static uint8_t* eeCacheLookup(GsRenderer* gs, uint16_t atlasId) {
-    if (atlasId >= gs->atlasCount) return nullptr;
-    if (0 > gs->eeCacheEntries[atlasId].atlasId) return nullptr;
+    if (atlasId >= gs->atlasCount) return NULL;
+    if (0 > gs->eeCacheEntries[atlasId].atlasId) return NULL;
 
     gs->eeCacheEntries[atlasId].lastUsed = gs->frameCounter;
     return gs->eeCache + gs->eeCacheEntries[atlasId].offset;
@@ -543,7 +543,7 @@ static void uploadAtlasToChunk(GsRenderer* gs, uint16_t atlasId, int32_t firstCh
     uint8_t* cached = eeCacheLookup(gs, atlasId);
     const char* atlasSource = "RAM";
 
-    if (cached == nullptr) {
+    if (cached == NULL) {
         // Cache miss: read from TEXTURES.BIN and insert into EE cache
         uint32_t dataSize = gs->atlasDataSizes[atlasId];
         uint8_t* tempBuf = (uint8_t*) safeMemalign(128, dataSize);
@@ -560,7 +560,7 @@ static void uploadAtlasToChunk(GsRenderer* gs, uint16_t atlasId, int32_t firstCh
 
         atlasSource = "disk";
         cached = eeCacheLookup(gs, atlasId);
-        if (cached == nullptr) {
+        if (cached == NULL) {
             // EE cache insert failed (atlas too large?), fall back to direct file read
             fprintf(stderr, "GsRenderer: EE cache insert failed for atlas %u, reading directly from CDVD\n", atlasId);
             fseek(gs->texturesFile, (long) gs->atlasOffsets[atlasId], SEEK_SET);
@@ -774,14 +774,14 @@ static bool setupTextureForTPAG(GsRenderer* gs, GSTEXTURE* tex, int32_t tpagInde
 
 // ===[ Tile Lookup and Texture Setup ]===
 
-// Finds a tile entry by (bgDef, srcX, srcY, srcW, srcH). Returns nullptr if not found.
+// Finds a tile entry by (bgDef, srcX, srcY, srcW, srcH). Returns NULL if not found.
 static AtlasTileEntry* findTileEntry(GsRenderer* gs, int16_t bgDef, uint16_t srcX, uint16_t srcY, uint16_t srcW, uint16_t srcH) {
     forEach(AtlasTileEntry, entry, gs->atlasTileEntries, gs->atlasTileCount) {
         if (entry->bgDef == bgDef && entry->srcX == srcX && entry->srcY == srcY && entry->srcW == srcW && entry->srcH == srcH) {
             return entry;
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 // Configures a GSTEXTURE for rendering a tile entry. Same logic as setupTextureForTPAG but for AtlasTileEntry.
@@ -851,11 +851,11 @@ static void gsInit(Renderer* renderer, DataWin* dataWin) {
     // Open TEXTURES.BIN and keep it open for on-demand atlas loading
     char* texturesBinPath = PS2Utils_createDevicePath("TEXTURES.BIN");
     gs->texturesFile = fopen(texturesBinPath, "rb");
-    if (gs->texturesFile == nullptr) {
+    if (gs->texturesFile == NULL) {
         fprintf(stderr, "GsRenderer: Failed to open %s\n", texturesBinPath);
         abort();
     }
-    setvbuf(gs->texturesFile, nullptr, _IOFBF, 128 * 1024);
+    setvbuf(gs->texturesFile, NULL, _IOFBF, 128 * 1024);
     free(texturesBinPath);
 
     // Upload CLUTs to VRAM
@@ -873,7 +873,7 @@ static void gsInit(Renderer* renderer, DataWin* dataWin) {
 
 static void gsDestroy(Renderer* renderer) {
     GsRenderer* gs = (GsRenderer*) renderer;
-    if (gs->texturesFile != nullptr) {
+    if (gs->texturesFile != NULL) {
         fclose(gs->texturesFile);
     }
     free(gs->atlasOffsets);
@@ -890,17 +890,17 @@ static void gsDestroy(Renderer* renderer) {
     free(gs);
 }
 
-static void gsBeginFrame(Renderer* renderer, [[maybe_unused]] int32_t gameW, [[maybe_unused]] int32_t gameH, [[maybe_unused]] int32_t windowW, [[maybe_unused]] int32_t windowH) {
+static void gsBeginFrame(Renderer* renderer, __attribute__((unused)) int32_t gameW, __attribute__((unused)) int32_t gameH, __attribute__((unused)) int32_t windowW, __attribute__((unused)) int32_t windowH) {
     GsRenderer* gs = (GsRenderer*) renderer;
     gs->zCounter = 1;
     gs->frameCounter++;
 }
 
-static void gsEndFrame([[maybe_unused]] Renderer* renderer) {
+static void gsEndFrame(__attribute__((unused)) Renderer* renderer) {
     // No-op: flip happens in main loop
 }
 
-static void gsBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_t viewW, int32_t viewH, [[maybe_unused]] int32_t portX, [[maybe_unused]] int32_t portY, [[maybe_unused]] int32_t portW, [[maybe_unused]] int32_t portH, [[maybe_unused]] float viewAngle) {
+static void gsBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_t viewW, int32_t viewH, __attribute__((unused)) int32_t portX, __attribute__((unused)) int32_t portY, __attribute__((unused)) int32_t portW, __attribute__((unused)) int32_t portH, __attribute__((unused)) float viewAngle) {
     GsRenderer* gs = (GsRenderer*) renderer;
     gs->viewX = viewX;
     gs->viewY = viewY;
@@ -920,7 +920,7 @@ static void gsBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_
     gs->offsetY = (448.0f - renderedH) / 2.0f;
 }
 
-static void gsEndView([[maybe_unused]] Renderer* renderer) {
+static void gsEndView(__attribute__((unused)) Renderer* renderer) {
     // No-op
 }
 
@@ -1178,7 +1178,7 @@ static void gsDrawRectangle(Renderer* renderer, float x1, float y1, float x2, fl
     }
 }
 
-static void gsDrawLine(Renderer* renderer, float x1, float y1, float x2, float y2, [[maybe_unused]] float width, uint32_t color, float alpha) {
+static void gsDrawLine(Renderer* renderer, float x1, float y1, float x2, float y2, __attribute__((unused)) float width, uint32_t color, float alpha) {
     GsRenderer* gs = (GsRenderer*) renderer;
 
     uint8_t r = BGR_R(color);
@@ -1197,11 +1197,11 @@ static void gsDrawLine(Renderer* renderer, float x1, float y1, float x2, float y
 }
 
 // PS2 gsKit doesn't support per-vertex colors on lines, so we just use color1
-static void gsDrawLineColor(Renderer* renderer, float x1, float y1, float x2, float y2, float width, uint32_t color1, [[maybe_unused]] uint32_t color2, float alpha) {
+static void gsDrawLineColor(Renderer* renderer, float x1, float y1, float x2, float y2, float width, uint32_t color1, __attribute__((unused)) uint32_t color2, float alpha) {
     renderer->vtable->drawLine(renderer, x1, y1, x2, y2, width, color1, alpha);
 }
 
-static void gsDrawText(Renderer* renderer, const char* text, float x, float y, float xscale, float yscale, [[maybe_unused]] float angleDeg) {
+static void gsDrawText(Renderer* renderer, const char* text, float x, float y, float xscale, float yscale, __attribute__((unused)) float angleDeg) {
     GsRenderer* gs = (GsRenderer*) renderer;
     DataWin* dw = renderer->dataWin;
 
@@ -1213,7 +1213,7 @@ static void gsDrawText(Renderer* renderer, const char* text, float x, float y, f
     int32_t fontTpagIndex = DataWin_resolveTPAG(dw, font->textureOffset);
     bool hasTexture = false;
     GSTEXTURE tex;
-    AtlasTPAGEntry* atlasEntry = nullptr;
+    AtlasTPAGEntry* atlasEntry = NULL;
     float ratioX = 1.0f;
     float ratioY = 1.0f;
 
@@ -1277,7 +1277,7 @@ static void gsDrawText(Renderer* renderer, const char* text, float x, float y, f
         while (lineLen > pos) {
             uint16_t ch = TextUtils_decodeUtf8(line, lineLen, &pos);
             FontGlyph* glyph = TextUtils_findGlyph(font, ch);
-            if (glyph == nullptr) continue;
+            if (glyph == NULL) continue;
 
             if (glyph->sourceWidth > 0 && glyph->sourceHeight > 0) {
                 float glyphX = x + (cursorX + (float) glyph->offset) * xscale * font->scaleX;
@@ -1329,7 +1329,7 @@ static void gsDrawText(Renderer* renderer, const char* text, float x, float y, f
     free(processed);
 }
 
-static void gsDrawTextColor(Renderer* renderer, const char* text, float x, float y, float xscale, float yscale, [[maybe_unused]] float angleDeg, int32_t _c1, int32_t _c2, int32_t _c3, int32_t _c4, float alpha) {
+static void gsDrawTextColor(Renderer* renderer, const char* text, float x, float y, float xscale, float yscale, __attribute__((unused)) float angleDeg, int32_t _c1, int32_t _c2, int32_t _c3, int32_t _c4, float alpha) {
     GsRenderer* gs = (GsRenderer*) renderer;
     DataWin* dw = renderer->dataWin;
 
@@ -1341,7 +1341,7 @@ static void gsDrawTextColor(Renderer* renderer, const char* text, float x, float
     int32_t fontTpagIndex = DataWin_resolveTPAG(dw, font->textureOffset);
     bool hasTexture = false;
     GSTEXTURE tex;
-    AtlasTPAGEntry* atlasEntry = nullptr;
+    AtlasTPAGEntry* atlasEntry = NULL;
     float ratioX = 1.0f;
     float ratioY = 1.0f;
 
@@ -1431,7 +1431,7 @@ static void gsDrawTextColor(Renderer* renderer, const char* text, float x, float
         while (lineLen > pos) {
             uint16_t ch = TextUtils_decodeUtf8(line, lineLen, &pos);
             FontGlyph* glyph = TextUtils_findGlyph(font, ch);
-            if (glyph == nullptr) continue;
+            if (glyph == NULL) continue;
 
             if (glyph->sourceWidth > 0 && glyph->sourceHeight > 0) {
                 float glyphX = x + (cursorX + (float) glyph->offset) * xscale * font->scaleX;
@@ -1551,16 +1551,16 @@ static void gsDrawTriangle(Renderer *renderer, float x1, float y1, float x2, flo
     }
 }
 
-static void gsFlush([[maybe_unused]] Renderer* renderer) {
+static void gsFlush(__attribute__((unused)) Renderer* renderer) {
     // No-op: gsKit queues commands, executed in main loop
 }
 
-static int32_t gsCreateSpriteFromSurface([[maybe_unused]] Renderer* renderer, [[maybe_unused]] int32_t x, [[maybe_unused]] int32_t y, [[maybe_unused]] int32_t w, [[maybe_unused]] int32_t h, [[maybe_unused]] bool removeback, [[maybe_unused]] bool smooth, [[maybe_unused]] int32_t xorig, [[maybe_unused]] int32_t yorig) {
+static int32_t gsCreateSpriteFromSurface(__attribute__((unused)) Renderer* renderer, __attribute__((unused)) int32_t x, __attribute__((unused)) int32_t y, __attribute__((unused)) int32_t w, __attribute__((unused)) int32_t h, __attribute__((unused)) bool removeback, __attribute__((unused)) bool smooth, __attribute__((unused)) int32_t xorig, __attribute__((unused)) int32_t yorig) {
     fprintf(stderr, "GsRenderer: createSpriteFromSurface not supported on PS2\n");
     return -1;
 }
 
-static void gsDeleteSprite([[maybe_unused]] Renderer* renderer, [[maybe_unused]] int32_t spriteIndex) {
+static void gsDeleteSprite(__attribute__((unused)) Renderer* renderer, __attribute__((unused)) int32_t spriteIndex) {
     // No-op
 }
 
@@ -1569,7 +1569,7 @@ static void gsDrawTile(Renderer* renderer, RoomTile* tile, float offsetX, float 
 
     // Look up the tile in the atlas tile entries
     AtlasTileEntry* tileEntry = findTileEntry(gs, (int16_t) tile->backgroundDefinition, (uint16_t) tile->sourceX, (uint16_t) tile->sourceY, (uint16_t) tile->width, (uint16_t) tile->height);
-    if (tileEntry == nullptr)
+    if (tileEntry == NULL)
         return;
 
     // Set up GSTEXTURE for this tile entry
