@@ -1222,7 +1222,7 @@ static void parseROOM(BinaryReader* reader, DataWin* dw) {
                             }
                             default:
                                 fprintf(stderr, "Unsupported Room Layer Type %u\n", layer->type);
-                                exit(0);
+                                //exit(0);
                                 break;
                         }
                     }
