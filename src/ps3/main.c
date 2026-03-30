@@ -20,6 +20,33 @@
 
 #include "utils.h"
 
+#include <io/pad.h>
+#include <sys/systime.h>
+#include <sys/thread.h>
+
+typedef struct {
+    uint8_t digital;
+    uint8_t mask;
+    int32_t gmlKey;
+} PadMapping;
+
+const PadMapping PAD_MAPPINGS[] = {
+    { PAD_BUTTON_OFFSET_DIGITAL1, PAD_CTRL_UP,       VK_UP },
+    { PAD_BUTTON_OFFSET_DIGITAL1, PAD_CTRL_DOWN,     VK_DOWN },
+    { PAD_BUTTON_OFFSET_DIGITAL1, PAD_CTRL_LEFT,     VK_LEFT },
+    { PAD_BUTTON_OFFSET_DIGITAL1, PAD_CTRL_RIGHT,    VK_RIGHT },
+    { PAD_BUTTON_OFFSET_DIGITAL1, PAD_CTRL_START,    'C' },
+    { PAD_BUTTON_OFFSET_DIGITAL1, PAD_CTRL_SELECT,   VK_ESCAPE },
+    { PAD_BUTTON_OFFSET_DIGITAL2, PAD_CTRL_CROSS,    'Z' },
+    { PAD_BUTTON_OFFSET_DIGITAL2, PAD_CTRL_SQUARE,   'X' },
+    { PAD_BUTTON_OFFSET_DIGITAL2, PAD_CTRL_TRIANGLE, 'C' },
+    { PAD_BUTTON_OFFSET_DIGITAL2, PAD_CTRL_L1,       VK_PAGEDOWN },
+    { PAD_BUTTON_OFFSET_DIGITAL2, PAD_CTRL_R1,       VK_PAGEUP },
+    { PAD_BUTTON_OFFSET_DIGITAL2, PAD_CTRL_L2,       VK_F10 },
+};
+static const int PAD_MAPPING_COUNT = sizeof(PAD_MAPPINGS) / sizeof(PAD_MAPPINGS[0]);
+static bool prevState[sizeof(PAD_MAPPINGS) / sizeof(PAD_MAPPINGS[0])] = {0};
+
 #define DATAWIN_PATH "/dev_hdd0/BUTTERSCOTCH/data.win"
 
 // ===[ MAIN ]===
@@ -69,7 +96,7 @@ int main(int argc, char* argv[]) {
     Runner* runner = Runner_create(dataWin, vm, (FileSystem*) glfwFileSystem);
 
     // Init GLFW
-    ps3glInit();
+    ioPadInit(7);
 
     // Initialize the renderer
     Renderer* renderer = GLLegacyRenderer_create();
@@ -88,25 +115,53 @@ int main(int argc, char* argv[]) {
 
     // Main loop
     bool debugPaused = false;
-    double lastFrameTime = __builtin_ppc_get_timebase();
+    double freq = (double)sysGetTimebaseFrequency();
+    double lastFrameTime = (double)__builtin_ppc_get_timebase() / freq;
     while (!runner->shouldExit) {
         // Clear last frame's pressed/released state, then poll new input events
         RunnerKeyboard_beginFrame(runner->keyboard);
 
         // Run the game step if the game is paused
-        bool shouldStep = true;
         double frameStartTime = 0;
 
-        if (shouldStep) {
-            // Run one game step (Begin Step, Keyboard, Alarms, Step, End Step, room transitions)
-            Runner_step(runner);
+        padInfo padinfo;
+        ioPadGetInfo(&padinfo);
 
-            // Update audio system (gain fading, cleanup ended sounds)
-            float dt = (float) (__builtin_ppc_get_timebase() - lastFrameTime);
-            if (0.0f > dt) dt = 0.0f;
-            if (dt > 0.1f) dt = 0.1f; // cap delta to avoid huge fades on lag spikes
-            runner->audioSystem->vtable->update(runner->audioSystem, dt);
+        if (padinfo.status[0])
+        {
+            padData paddata;
+            ioPadGetData(0, &paddata);
+
+            for (int i = 0; i < PAD_MAPPING_COUNT; i++)
+            {
+                uint8_t byte = (uint8_t)paddata.button[PAD_MAPPINGS[i].digital];
+                uint8_t mask = PAD_MAPPINGS[i].mask;
+                int32_t gmlKey = PAD_MAPPINGS[i].gmlKey;
+
+                bool isPressed = (byte & mask) != 0;
+                bool wasPressed = prevState[i];
+
+                if (isPressed && !wasPressed)
+                {
+                    RunnerKeyboard_onKeyDown(runner->keyboard, gmlKey);
+                }
+                else if (!isPressed && wasPressed)
+                {
+                    RunnerKeyboard_onKeyUp(runner->keyboard, gmlKey);
+                }
+
+                prevState[i] = isPressed;
+            }
         }
+
+        // Run one game step (Begin Step, Keyboard, Alarms, Step, End Step, room transitions)
+        Runner_step(runner);
+
+        // Update audio system (gain fading, cleanup ended sounds)
+        float dt = (float) ((__builtin_ppc_get_timebase()/sysGetTimebaseFrequency()) - lastFrameTime);
+        if (0.0f > dt) dt = 0.0f;
+        if (dt > 0.1f) dt = 0.1f; // cap delta to avoid huge fades on lag spikes
+        runner->audioSystem->vtable->update(runner->audioSystem, dt);
 
         Room* activeRoom = runner->currentRoom;
 
@@ -195,7 +250,37 @@ int main(int argc, char* argv[]) {
         ps3glSwapBuffers();
 
         // Limit frame rate to room speed (skip in headless mode for max speed!!)
-        lastFrameTime = __builtin_ppc_get_timebase();
+        if (runner->currentRoom->speed > 0) {
+            double targetInterval = 1.0 / (double)runner->currentRoom->speed; // e.g. 0.0333
+            double nextFrameTime = lastFrameTime + targetInterval;
+            
+            double now = (double)__builtin_ppc_get_timebase() / freq;
+
+            // If we are lagging behind by more than 100ms, jump ahead 
+            // to prevent the "spiral of death" catch-up logic
+            if (now > nextFrameTime + 0.1) {
+                nextFrameTime = now;
+            }
+
+            // Precision Sleep/Spin logic
+            while (now < nextFrameTime) {
+                double diff = nextFrameTime - now;
+                
+                // If more than 2ms left, tell the OS to sleep
+                if (diff > 0.002) {
+                    // sysUsleep takes MICROSECONDS (seconds * 1,000,000)
+                    // We sleep for slightly less than the diff to avoid oversleeping
+                    sysUsleep((uint32_t)((diff - 0.001) * 1000000.0));
+                }
+                
+                // Update now for the spin-wait
+                now = (double)__builtin_ppc_get_timebase() / freq;
+            }
+            
+            lastFrameTime = nextFrameTime;
+        } else {
+            lastFrameTime = (double)__builtin_ppc_get_timebase() / freq;
+        }
     }
 
 

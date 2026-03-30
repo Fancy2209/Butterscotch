@@ -46,16 +46,27 @@ jobs:
           echo "date=$(git log -1 --format=%cd --date=short)" >> $GITHUB_OUTPUT
 
       - name: Configure
-        run: cmake -B build -DPLATFORM=ps3 -DCMAKE_TOOLCHAIN_FILE=ppu.cmake -DCMAKE_BUILD_TYPE=Release "-DBUTTERSCOTCH_COMMIT_HASH=${{ steps.commit-info.outputs.hash }}" "-DBUTTERSCOTCH_COMMIT_DATE=${{ steps.commit-info.outputs.date }}"
+        run: |
+          cmake -B build \ 
+          -DPLATFORM=ps3 \
+          -DCMAKE_TOOLCHAIN_FILE=ppu.cmake \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DINTERPROCEDURAL_OPTIMIZATION=ON \
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+          "-DBUTTERSCOTCH_COMMIT_HASH=${{ steps.commit-info.outputs.hash }}" \
+          "-DBUTTERSCOTCH_COMMIT_DATE=${{ steps.commit-info.outputs.date }}"
 
       - name: Build
-        run: cmake --build build -j$(nproc) && sprxlinker build/butterscotch.elf
+        run: |
+          cmake --build build -j$(nproc)
+          sprxlinker build/butterscotch.elf
+          make_self build/butterscotch.elf build/butterscotch.self
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: butterscotch-ps3
-          path: build/butterscotch.elf
+          path: build/butterscotch.self
 
   build-glfw-windows:
     name: Build (GLFW/Windows)
