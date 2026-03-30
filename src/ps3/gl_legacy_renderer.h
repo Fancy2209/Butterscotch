@@ -23,6 +23,10 @@ typedef struct {
 
     int32_t windowW; // stored from beginFrame for endFrame blit
     int32_t windowH;
+    int32_t frameViewportX;
+    int32_t frameViewportY;
+    int32_t frameViewportW;
+    int32_t frameViewportH;
     int32_t gameW; // game resolution (for FBO sizing)
     int32_t gameH;
 

@@ -105,6 +105,31 @@ static void glBeginFrame(Renderer* renderer, int32_t gameW, int32_t gameH, int32
     gl->gameW = gameW;
     gl->gameH = gameH;
 
+    // Compute centered letterbox viewport preserving game aspect ratio.
+    float sx = (gameW > 0) ? ((float) windowW / (float) gameW) : 1.0f;
+    float sy = (gameH > 0) ? ((float) windowH / (float) gameH) : 1.0f;
+    float s = (sx < sy) ? sx : sy;
+
+    int32_t vpW = (int32_t) ((float) gameW * s + 0.5f);
+    int32_t vpH = (int32_t) ((float) gameH * s + 0.5f);
+    if (vpW <= 0) vpW = windowW;
+    if (vpH <= 0) vpH = windowH;
+
+    gl->frameViewportX = (windowW - vpW) / 2;
+    gl->frameViewportY = (windowH - vpH) / 2;
+    gl->frameViewportW = vpW;
+    gl->frameViewportH = vpH;
+
+    // Clear full backbuffer to black (letterbox bars).
+    glDisable(GL_SCISSOR_TEST);
+    glViewport(0, 0, windowW, windowH);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+    // Restrict subsequent frame clear to the game area so bars remain black.
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(gl->frameViewportX, gl->frameViewportY, gl->frameViewportW, gl->frameViewportH);
+
 }
 
 static void glBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_t viewW, int32_t viewH, int32_t portX, int32_t portY, int32_t portW, int32_t portH, float viewAngle) {
@@ -113,13 +138,22 @@ static void glBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_
     gl->quadCount = 0;
     gl->currentTextureId = 0;
 
-    // Set viewport and scissor to the port rectangle within the FBO
-    // FBO uses game resolution, port coordinates are in game space
-    // OpenGL viewport Y is bottom-up, game Y is top-down
-    int32_t glPortY = gl->gameH - portY - portH;
-    glViewport(0, glPortY, gl->windowW, gl->windowH);
+    // Map game-space port into the centered letterbox viewport.
+    float scaleX = (gl->gameW > 0) ? ((float) gl->frameViewportW / (float) gl->gameW) : 1.0f;
+    float scaleY = (gl->gameH > 0) ? ((float) gl->frameViewportH / (float) gl->gameH) : 1.0f;
+
+    int32_t vpX = gl->frameViewportX + (int32_t) ((float) portX * scaleX + 0.5f);
+    int32_t vpYTop = gl->frameViewportY + (int32_t) ((float) portY * scaleY + 0.5f);
+    int32_t vpW = (int32_t) ((float) portW * scaleX + 0.5f);
+    int32_t vpH = (int32_t) ((float) portH * scaleY + 0.5f);
+    if (vpW <= 0) vpW = 1;
+    if (vpH <= 0) vpH = 1;
+
+    // OpenGL viewport/scissor Y is bottom-up.
+    int32_t glPortY = gl->windowH - (vpYTop + vpH);
+    glViewport(vpX, glPortY, vpW, vpH);
     glEnable(GL_SCISSOR_TEST);
-    glScissor(0, glPortY, gl->windowW, gl->windowH);
+    glScissor(vpX, glPortY, vpW, vpH);
 
     // Build orthographic projection (Y-down for GML coordinate system)
     Matrix4f projection;
@@ -146,7 +180,6 @@ static void glBeginView(Renderer* renderer, int32_t viewX, int32_t viewY, int32_
     glLoadMatrixf(projection.m);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    //glActiveTexture(GL_TEXTURE0);
 }
 
 static void glEndView(Renderer* renderer) {

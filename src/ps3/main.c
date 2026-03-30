@@ -154,6 +154,41 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        if (RunnerKeyboard_checkPressed(runner->keyboard, VK_PAGEDOWN)) {
+            DataWin* dw = runner->dataWin;
+            forEachIndexed(Room, room, i, dw->room.rooms, dw->room.count) {
+                if (strcmp(room->name, "room_cc_joker") == 0) {
+                    runner->pendingRoom = i;
+                    break;
+                }
+            }
+        }
+
+        // Reset global interact state because I HATE when I get stuck while moving through rooms
+        if (RunnerKeyboard_checkPressed(runner->keyboard, VK_PAGEUP)) {
+            int32_t interactVarId = shget(runner->vmContext->globalVarNameMap, "interact");
+            int32_t darkzoneVarID = shget(runner->vmContext->globalVarNameMap, "darkzone");
+            int32_t charID = shget(runner->vmContext->globalVarNameMap, "char");
+
+            runner->vmContext->globalVars[interactVarId] = RValue_makeInt32(0);
+            printf("Changed global.interact [%d] value!\n", interactVarId);
+            runner->vmContext->globalVars[darkzoneVarID] = RValue_makeInt32(1);
+            printf("Changed global.darkzone [%d] value!\n", darkzoneVarID);
+            hmput(runner->vmContext->globalArrayMap, ((int64_t) charID << 32) | (uint32_t) 0, RValue_makeInt32(1));
+            printf("Changed global.char[0]!\n");
+            hmput(runner->vmContext->globalArrayMap, ((int64_t) charID << 32) | (uint32_t) 1, RValue_makeInt32(2));
+            printf("Changed global.char[1]!\n");
+            hmput(runner->vmContext->globalArrayMap, ((int64_t) charID << 32) | (uint32_t) 2, RValue_makeInt32(3));
+            printf("Changed global.char[2]!\n");
+            DataWin* dw = runner->dataWin;
+            forEachIndexed(Room, room, i, dw->room.rooms, dw->room.count) {
+                if (strcmp(room->name, "room_dark1") == 0) {
+                    runner->pendingRoom = i;
+                    break;
+                }
+            }
+            }
+
         // Run one game step (Begin Step, Keyboard, Alarms, Step, End Step, room transitions)
         Runner_step(runner);
 
