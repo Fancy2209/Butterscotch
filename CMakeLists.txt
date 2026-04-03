@@ -3,7 +3,7 @@ project(butterscotch C)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-add_compile_options(-Wall -Wextra)
+# add_compile_options(-Wall -Wextra)
 
 set(PLATFORM "" CACHE STRING "Platform backend")
 option(PS2_DTL_SUPPORT "Support Sony DTL PS2 development kits when building PLATFORM=ps2." OFF)
