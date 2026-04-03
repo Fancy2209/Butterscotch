@@ -189,3 +189,31 @@ jobs:
         with:
           name: butterscotch-ps2
           path: build/butterscotch.elf
+
+  build-ps3:
+      name: Build (PS3)
+      runs-on: ubuntu-latest
+      container: scummvm/dockerized-toolchains:ps3
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: Get commit info
+          id: commit-info
+          run: |
+            echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+            echo "date=$(git log -1 --format=%cd --date=short)" >> $GITHUB_OUTPUT
+
+        - name: Configure
+          run: cmake -B build -DPLATFORM=ps3 -DCMAKE_TOOLCHAIN_FILE=ppu.cmake -DCMAKE_BUILD_TYPE=Release -DINTERPROCEDURAL_OPTIMIZATION=ON -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON "-DBUTTERSCOTCH_COMMIT_HASH=${{ steps.commit-info.outputs.hash }}" "-DBUTTERSCOTCH_COMMIT_DATE=${{ steps.commit-info.outputs.date }}"
+
+        - name: Build
+          run: |
+            cmake --build build -j$(nproc)
+            sprxlinker build/butterscotch.elf
+            make_self build/butterscotch.elf build/butterscotch.self
+
+        - name: Upload artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: butterscotch-ps3
+            path: build/butterscotch.self

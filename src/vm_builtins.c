@@ -125,6 +125,9 @@ static bool isValidAlarmIndex(int alarmIndex) {
     return alarmIndex >= 0 && GML_ALARM_COUNT > alarmIndex;
 }
 
+#ifdef __lv2ppu__
+#include <sys/systime.h>
+#endif
 RValue VMBuiltins_getVariable(VMContext* ctx, const char* name, int32_t arrayIndex) {
     Instance* inst = (Instance*) ctx->currentInstance;
     Runner* runner = (Runner*) ctx->runner;
@@ -370,8 +373,9 @@ RValue VMBuiltins_getVariable(VMContext* ctx, const char* name, int32_t arrayInd
         }
     }
 
-    // Timing
+     // Timing
     if (strcmp(name, "current_time") == 0) {
+        #ifndef __lv2ppu__
         #ifdef _WIN32
         LARGE_INTEGER freq, counter;
         QueryPerformanceFrequency(&freq);
@@ -381,6 +385,9 @@ RValue VMBuiltins_getVariable(VMContext* ctx, const char* name, int32_t arrayInd
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
         GMLReal ms = (GMLReal) ts.tv_sec * 1000.0 + (GMLReal) ts.tv_nsec / 1000000.0;
+        #endif
+        #else
+        GMLReal ms = __builtin_ppc_get_timebase() / sysGetTimebaseFrequency();
         #endif
         return RValue_makeReal(ms);
     }
