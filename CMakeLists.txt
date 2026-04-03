@@ -24,6 +24,7 @@ target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 # stb_ds
 target_include_directories(butterscotch PUBLIC vendor/stb/ds)
+target_include_directories(butterscotch PUBLIC vendor/ps2intrin)
 
 # The PS2 EE has a single-precision FPU only, so double is software-emulated
 target_compile_definitions(butterscotch PRIVATE USE_FLOAT_REALS)
