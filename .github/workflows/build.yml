@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [ps3_based]
   pull_request:
-    branches: [main]
+    branches: [ps3_based]
 
 jobs:
   build-glfw-linux-x86_64:
