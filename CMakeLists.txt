@@ -19,38 +19,40 @@ add_compile_definitions(
 file(GLOB SOURCES src/*.c)
 file(GLOB PLATFORM_SOURCES src/${PLATFORM}/*.c)
 
+set(INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/src vendor/stb/ds vendor/ps2intrin)
+set(COMPILE_DEFS
+    # The PS2 EE has a single-precision FPU only, so double is software-emulated
+    USE_FLOAT_REALS
+    # By disabling Int64 support, we can fit the entire RValue struct in 8 bytes, improving performance and memory usage
+    NO_RVALUE_INT64
+    # Disable Butterscotch VM/interpreter tracing checks
+    DISABLE_VM_TRACING
+)
+set(COMPILE_FLAGS
+    -O2 -G8 -mno-abicalls -mno-shared
+    # Treat unsuffixed float constants as single-precision to avoid accidental
+    # float->double promotions on platforms with no hardware double
+    -fsingle-precision-constant
+)
+
 add_executable(butterscotch ${SOURCES} ${PLATFORM_SOURCES})
-target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src)
-
-# stb_ds
-target_include_directories(butterscotch PUBLIC vendor/stb/ds)
-target_include_directories(butterscotch PUBLIC vendor/ps2intrin)
-
-# The PS2 EE has a single-precision FPU only, so double is software-emulated
-target_compile_definitions(butterscotch PRIVATE USE_FLOAT_REALS)
-# By disabling Int64 support, we can fit the entire RValue struct in 8 bytes, improving performance and memory usage
-target_compile_definitions(butterscotch PRIVATE NO_RVALUE_INT64)
-# Disable Butterscotch VM/interpreter tracing checks
-target_compile_definitions(butterscotch PRIVATE DISABLE_VM_TRACING)
-# Treat unsuffixed float constants as single-precision to avoid accidental
-# float->double promotions on platforms with no hardware double
-target_compile_options(butterscotch PRIVATE -fsingle-precision-constant)
+target_include_directories(butterscotch PRIVATE ${INCLUDE_DIRS})
+target_compile_definitions(butterscotch PRIVATE ${COMPILE_DEFS})
+target_compile_options(butterscotch PRIVATE ${COMPILE_FLAGS})
 
 if(DISABLE_AUDIO)
-    add_compile_definitions(DISABLE_AUDIO)
+    target_compile_definitions(butterscotch PRIVATE DISABLE_AUDIO)
     list(REMOVE_ITEM PLATFORM_SOURCES ${CMAKE_SOURCE_DIR}/src/ps2/ps2_audio_system.c)
 endif()
 if(DTL_SUPPORT)
     target_compile_definitions(butterscotch PRIVATE DTL_SUPPORT)
 endif()
 
-target_compile_options(butterscotch PRIVATE -O2 -G8 -mno-abicalls -mno-shared)
-
 if(PS2)
     # Compiling on the Docker container
     target_include_directories(butterscotch PRIVATE $ENV{PS2SDK}/ee/include $ENV{PS2SDK}/common/include $ENV{PS2DEV}/ee/include $ENV{GSKIT}/include)
     target_link_directories(butterscotch PRIVATE $ENV{PS2SDK}/ee/lib $ENV{GSKIT}/lib)
-    target_link_libraries(butterscotch gskit dmakit audsrv pad mc patches kernel c m)
+    target_link_libraries(butterscotch PRIVATE gskit dmakit audsrv pad mc patches kernel c m)
 
     # Embed ps2sdk IRX modules (sio2man, padman) as C arrays via bin2c
     # This avoids loading from rom0: which has compatibility issues between fat/slim PS2

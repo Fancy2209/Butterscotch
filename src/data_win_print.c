@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-void DataWin_printDebugSummary(DataWin* dataWin) {
+void DataWin_printDebugSummary(DataWin* dataWin, int verbose) {
     printf("===== data.win Summary =====\n\n");
 
     // GEN8
@@ -255,11 +255,12 @@ void DataWin_printDebugSummary(DataWin* dataWin) {
     printf("-- Room Instances --\n");
     forEach(Room, room, dataWin->room.rooms, dataWin->room.count) {
         printf("Room %s\n", room->name);
-
-        forEachIndexed(RoomGameObject, roomGameObject, idx, room->gameObjects, room->gameObjectCount) {
-            int32_t objectDefinitionId = roomGameObject->objectDefinition;
-            GameObject* objectDefinition = &dataWin->objt.objects[objectDefinitionId];
-            printf("  Object %d (%s, x=%d, y=%d)\n", objectDefinitionId, objectDefinition->name, roomGameObject->x, roomGameObject->y);
+        if (verbose) {
+            forEachIndexed(RoomGameObject, roomGameObject, idx, room->gameObjects, room->gameObjectCount) {
+                int32_t objectDefinitionId = roomGameObject->objectDefinition;
+                GameObject* objectDefinition = &dataWin->objt.objects[objectDefinitionId];
+                printf("  Object %d (%s, x=%d, y=%d)\n", objectDefinitionId, objectDefinition->name, roomGameObject->x, roomGameObject->y);
+            }
         }
     }
 

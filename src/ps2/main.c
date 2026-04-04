@@ -288,6 +288,8 @@ int main(int argc, char* argv[]) {
     int32_t gameW = (int32_t) gen8->defaultWindowWidth;
     int32_t gameH = (int32_t) gen8->defaultWindowHeight;
 
+    DataWin_printDebugSummary(dataWin, 0);
+
     // ===[ Initialize Timer ]===
     InitTimer(kBUSCLK);
     StartTimerSystemTime();

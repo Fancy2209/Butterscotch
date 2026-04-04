@@ -762,7 +762,7 @@ typedef struct DataWin {
 
 DataWin* DataWin_parse(const char* filePath, DataWinParserOptions options);
 void DataWin_free(DataWin* dataWin);
-void DataWin_printDebugSummary(DataWin* dataWin);
+void DataWin_printDebugSummary(DataWin* dataWin, int verbose);
 int32_t DataWin_resolveTPAG(DataWin* dw, uint32_t offset);
 int32_t DataWin_resolveSPRT(DataWin* dw, uint32_t offset);
 void GamePath_computeInternal(GamePath* path);
