@@ -47,48 +47,54 @@ static inline __attribute__((always_inline)) uint64_t mm64_haszero_epu8(const ui
 
 // Vectorized `strcmp` implementation.
 int strcmp (const char* s1, const char* s2) {
-    if (BOTH_ALIGNED_TO(s1, s2, VECTOR_SIZE_BYTES)) {
-        m128u8 s1_data = mm_load_epu8((const m128u8*)s1);
-        m128u8 s2_data = mm_load_epu8((const m128u8*)s2);
+    if (BOTH_ALIGNED_TO(s1, s2, 8)) {
+        if (!BOTH_ALIGNED_TO(s1, s2, VECTOR_SIZE_BYTES)) {
+            // 8-byte alignment, use half-width vectors.
+            //
+            // This is the most common case since we optimize the `data.win` strings
+            // for it, so we make sure this path doesn't require branch prediction.
+            uint64_t s1_data = *((uint64_t*)s1);
+            uint64_t s2_data = *((uint64_t*)s2);
+            while (s1_data == s2_data) {
+                if (mm64_haszero_epu8(s1_data)) {
+                    return 0;
+                }
 
-        // Result is zero if all characters are identical.
-        m128u8 res = mm_sub_epu8(s2_data, s1_data);
-        m128u8 res_upper = mm_castepu8_epu64(mm_unpackhi_epu64(mm_castepu64_epu8(res), mm_castepu64_epu8(s1_data)));
-        while ((GET_LOWER_U64(res) | GET_LOWER_U64(res_upper)) == 0) {
-
-            // Result is non-zero if any characters are '\0'.
-            // If we're at this point in the loop, we've already determined the vectors are identical,
-            // so we can exit here.
-            res = mm_haszero_epu8(s1_data);
-            res_upper = mm_castepu8_epu64(mm_unpackhi_epu64(mm_castepu64_epu8(res), mm_castepu64_epu8(s1_data)));
-            if ((GET_LOWER_U64(res) | GET_LOWER_U64(res_upper)) != 0) {
-                // We know that both vectors are identical, and we've now hit a null-terminator,
-                // so the strings must be identical.
-                return 0;
+                s1 += 8;
+                s2 += 8;
+                s1_data = *((uint64_t*)s1);
+                s2_data = *((uint64_t*)s2);
             }
+        } else {
+            // 16-byte alignment, use full-width vectors.
+            m128u8 s1_data = mm_load_epu8((const m128u8*)s1);
+            m128u8 s2_data = mm_load_epu8((const m128u8*)s2);
 
-            s1 += VECTOR_SIZE_BYTES;
-            s2 += VECTOR_SIZE_BYTES;
-            s1_data = mm_load_epu8((const m128u8*)s1);
-            s2_data = mm_load_epu8((const m128u8*)s2);
-            res = mm_sub_epu8(s2_data, s1_data);
-            res_upper = mm_castepu8_epu64(mm_unpackhi_epu64(mm_castepu64_epu8(res), mm_castepu64_epu8(s1_data)));
-        }
-    } else if (BOTH_ALIGNED_TO(s1, s2, 8)) {
-        uint64_t s1_data = *((uint64_t*)s1);
-        uint64_t s2_data = *((uint64_t*)s2);
-        while (s1_data == s2_data) {
-            if (mm64_haszero_epu8(s1_data)) {
-                return 0;
-            }
+            // Result is zero if all characters are identical.
+            m128u8 res = mm_sub_epu8(s2_data, s1_data);
+            m128u8 res_upper = mm_castepu8_epu64(mm_unpackhi_epu64(mm_castepu64_epu8(res), mm_castepu64_epu8(s1_data)));
+            while ((GET_LOWER_U64(res) | GET_LOWER_U64(res_upper)) == 0) {
 
-            s1 += 8;
-            s2 += 8;
-            s1_data = *((uint64_t*)s1);
-            s2_data = *((uint64_t*)s2);
+                // Result is non-zero if any characters are '\0'.
+                // If we're at this point in the loop, we've already determined the vectors are identical,
+                // so we can exit here.
+                res = mm_haszero_epu8(s1_data);
+                res_upper = mm_castepu8_epu64(mm_unpackhi_epu64(mm_castepu64_epu8(res), mm_castepu64_epu8(s1_data)));
+                if ((GET_LOWER_U64(res) | GET_LOWER_U64(res_upper)) != 0) {
+                    // We know that both vectors are identical, and we've now hit a null-terminator,
+                    // so the strings must be identical.
+                    return 0;
+                }
+
+                s1 += VECTOR_SIZE_BYTES;
+                s2 += VECTOR_SIZE_BYTES;
+                s1_data = mm_load_epu8((const m128u8*)s1);
+                s2_data = mm_load_epu8((const m128u8*)s2);
+                res = mm_sub_epu8(s2_data, s1_data);
+                res_upper = mm_castepu8_epu64(mm_unpackhi_epu64(mm_castepu64_epu8(res), mm_castepu64_epu8(s1_data)));
+            } 
         }
     }
-
     // Scalar loop epilogue (or standard non-aligned case)
     while (*s1 == *s2) {
         if (*s1 == '\0') {

@@ -176,7 +176,6 @@ int main(int argc, char* argv[]) {
             .parseCode = true,
             .parseVari = true,
             .parseFunc = true,
-            .parseStrg = true,
             .parseTxtr = false,
             .parseAudo = false,
             .skipLoadingPreciseMasksForNonPreciseSprites = true,
@@ -266,6 +265,8 @@ int main(int argc, char* argv[]) {
 
     runner->renderer = renderer;
 
+    DataWin_printDebugSummary(dataWin, 0);
+
     // ===[ Initialize Audio System ]===
 #ifndef DISABLE_AUDIO
     fprintf(stderr, "Initializing audio...\n");
@@ -287,8 +288,6 @@ int main(int argc, char* argv[]) {
     Gen8* gen8 = &dataWin->gen8;
     int32_t gameW = (int32_t) gen8->defaultWindowWidth;
     int32_t gameH = (int32_t) gen8->defaultWindowHeight;
-
-    DataWin_printDebugSummary(dataWin, 0);
 
     // ===[ Initialize Timer ]===
     InitTimer(kBUSCLK);

@@ -29,7 +29,6 @@ typedef struct {
     bool parseCode;
     bool parseVari;
     bool parseFunc;
-    bool parseStrg;
     bool parseTxtr;
     bool parseAudo;
     // If true, precise masks will be skipped when the sprite does not have a precise state set
@@ -721,9 +720,8 @@ typedef struct {
 
 // ===[ Top-level DataWin container ]===
 typedef struct DataWin {
-    uint8_t* strgBuffer;        // owned copy of STRG chunk raw data
-    // Absolute file offset of strgBuffer[0], we need this because data.win stores absolute offsets (from the beginning of the data.win file) instead of relative offsets
-    size_t strgBufferBase;
+    // Buffer of aligned strings loaded from STRG chunk.
+    uint8_t* strgBuffer;
 
     uint8_t* bytecodeBuffer;     // owned copy of CODE bytecode blob
     // Absolute file offset of bytecodeBuffer[0], we need this because data.win stores absolute offsets (from the beginning of the data.win file) instead of relative offsets
@@ -754,6 +752,9 @@ typedef struct DataWin {
     Txtr txtr;
     Audo audo;
 
+    // Lookup map: absolute file offset -> reallocated string buffer offset
+    // This is only used internally during the parsing process, and is deallocated afterwards.
+    struct { uint32_t key; const char* value; }* strOffsetMap;
     // Lookup map: absolute file offset -> TPAG index (built during TPAG parsing)
     struct { uint32_t key; int32_t value; }* tpagOffsetMap;
     // Lookup map: absolute file offset -> SPRT index (built during SPRT parsing)

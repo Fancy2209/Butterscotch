@@ -14,9 +14,14 @@
 // Reads a uint32 absolute file offset, resolves it into the pre-loaded STRG buffer,
 // and returns a pointer to the null-terminated string content at that offset.
 static const char* readStringPtr(BinaryReader* reader, DataWin* dw) {
+    // This function should only be called during parsing, and after STRG has been
+    // parsed.
+    if (dw->strOffsetMap == nullptr) return nullptr;
+
     uint32_t offset = BinaryReader_readUint32(reader);
     if (offset == 0) return nullptr;
-    return (const char*) (dw->strgBuffer + (offset - dw->strgBufferBase));
+
+    return hmget(dw->strOffsetMap, offset);
 }
 
 // Reads a pointer list header: count + absolute-offset pointers.
@@ -1390,22 +1395,80 @@ static void parseFUNC(BinaryReader* reader, DataWin* dw) {
     }
 }
 
-static void parseSTRG(BinaryReader* reader, DataWin* dw) {
+static void parseSTRG(BinaryReader* reader, DataWin* dw, uint32_t chunkLength) {
     Strg* s = &dw->strg;
+
+    // Read the whole STRG chunk into memory.
+    const size_t strgBufferBase = BinaryReader_getPosition(reader);
+    uint8_t* strgBuffer = BinaryReader_readBytesAt(reader, strgBufferBase, chunkLength);
+    fprintf(stderr, "Parsing STRG: base = %d, buffer = 0x%08x\n", strgBufferBase, strgBuffer);
 
     uint32_t count;
     uint32_t* ptrs = readPointerTable(reader, &count);
     s->count = count;
-
-    if (count == 0) { free(ptrs); s->strings = nullptr; return; }
-
-    s->strings = safeMalloc(count * sizeof(const char*));
-    repeat(count, i) {
-        // Pointer table points to the string's length prefix.
-        // The actual string content starts 4 bytes after.
-        s->strings[i] = (const char*)(dw->strgBuffer + (ptrs[i] + 4 - dw->strgBufferBase));
+    if (count == 0) {
+        s->strings = nullptr;
+        dw->strgBuffer = nullptr;
+        dw->strOffsetMap = nullptr;
+        goto cleanup;
     }
+
+    fprintf(stderr, "String count: %d\n", count);
+    s->strings = safeMalloc(count * sizeof(const char*));
+
+    // We're going to allocate a new buffer which we will copy the original
+    // strings to, with each one getting aligned to 8 bytes during the copy process.
+    //
+    // We do this because many string operations (**especially** on PS2) benefit
+    // greatly from 8-byte and 16-byte alignment.
+    size_t alignedStrBufSize = 0;
+    uint32_t* alignedSizes = safeMalloc(count * sizeof(uint32_t));
+    repeat(count, i) {
+        // To begin, calculate the final size of the buffer, which is the summed
+        // size of all strings after aligning them.
+        // We could do this without allocating, but since we need the sizes later
+        // anyway, it makes sense to cache them.
+
+        // NOTE NOTE NOTE: This assumes both the data.win format and the platform itself
+        // are little endian!
+        uint32_t strLen = 0;
+        memcpy(&strLen, strgBuffer + (ptrs[i] - strgBufferBase), sizeof(uint32_t));
+        // Align to 8 bytes (including null terminator).
+        strLen = ((strLen + 1) + (sizeof(uint64_t) - 1)) & (-sizeof(uint64_t));
+
+        alignedSizes[i] = strLen;
+        alignedStrBufSize += strLen;
+    }
+
+
+    // Allocate the new buffer for aligned strings.
+    // Force `calloc` to align the buffer itself to 16 bytes.
+    uint8_t* alignedStrBuf = safeCalloc((alignedStrBufSize + 16) / 16, 16);
+    fprintf(stderr, "Aligned string buffer size: %d, buffer loc: 0x%08x\n", alignedStrBufSize, alignedStrBuf);
+    uint32_t alignedOffset = 0;
+    repeat(count, i) {
+        uint32_t strLen = alignedSizes[i];
+        // Skip the length prefix.
+        uint8_t* origStr = (strgBuffer + (ptrs[i] + 4 - strgBufferBase));
+
+        s->strings[i] = strncpy(&alignedStrBuf[alignedOffset], origStr, strLen);
+
+        // Other parsing steps will attempt to read strings from the buffer using
+        // absolute file offsets. Translate them into pointers to our new buffer.
+        hmput(dw->strOffsetMap, ptrs[i] + 4, (const char*) s->strings[i]);
+        alignedOffset += strLen;
+    }
+
+    hmdefault(dw->strOffsetMap, nullptr);
+
+    // Save the aligned buffer.
+    dw->strgBuffer = alignedStrBuf;
+    alignedStrBuf = nullptr;
+    free(alignedSizes);
+
+cleanup:
     free(ptrs);
+    free(strgBuffer);
 }
 
 static void parseTXTR(BinaryReader* reader, DataWin* dw, size_t chunkEnd) {
@@ -1504,7 +1567,6 @@ DataWin* DataWin_parse(const char* filePath, DataWinParserOptions options) {
 
     // Allocate and zero-initialize DataWin
     DataWin* dw = safeCalloc(1, sizeof(DataWin));
-
     BinaryReader reader = BinaryReader_create(file, (size_t) fileSize);
 
     // Validate FORM header
@@ -1521,29 +1583,27 @@ DataWin* DataWin_parse(const char* filePath, DataWinParserOptions options) {
     (void) formLength;
 
     // Pass 1: Count total chunks and find STRG chunk offset.
-    // All other chunks reference strings from STRG, so it must be loaded first.
     int totalChunks = 0;
     BinaryReader_seek(&reader, 8); // reset to after FORM header
 
-    if (options.parseStrg) {
-        while ((size_t) fileSize > BinaryReader_getPosition(&reader)) {
-            if (BinaryReader_getPosition(&reader) + 8 > (size_t) fileSize) break;
+    while ((size_t) fileSize > BinaryReader_getPosition(&reader)) {
+        if (BinaryReader_getPosition(&reader) + 8 > (size_t) fileSize) break;
 
-            char chunkName[5] = {0};
-            BinaryReader_readBytes(&reader, chunkName, 4);
-            uint32_t chunkLength = BinaryReader_readUint32(&reader);
-            size_t chunkDataStart = BinaryReader_getPosition(&reader);
+        char chunkName[5] = {0};
+        BinaryReader_readBytes(&reader, chunkName, 4);
+        uint32_t chunkLength = BinaryReader_readUint32(&reader);
+        size_t chunkDataStart = BinaryReader_getPosition(&reader);
 
-            if (memcmp(chunkName, "STRG", 4) == 0) {
-                dw->strgBufferBase = chunkDataStart;
-                dw->strgBuffer = BinaryReader_readBytesAt(&reader, chunkDataStart, chunkLength);
-            }
-
-            BinaryReader_seek(&reader, chunkDataStart + chunkLength);
-            totalChunks++;
+        // For optimization purposes, we need to parse `STRG` immediately, before any other chunks.
+        if (memcmp(chunkName, "STRG", 4) == 0 && dw->strgBuffer == nullptr) {
+            parseSTRG(&reader, dw, chunkLength);
         }
+
+        BinaryReader_seek(&reader, chunkDataStart + chunkLength);
+        totalChunks++;
     }
 
+    
     // Pass 2: Parse all chunks
     // For each chunk that will be parsed, we bulk-read the entire chunk into memory first
     // and then parse from the memory buffer. This dramatically reduces the number of physical
@@ -1585,7 +1645,6 @@ DataWin* DataWin_parse(const char* filePath, DataWinParserOptions options) {
             (options.parseCode && memcmp(chunkName, "CODE", 4) == 0) ||
             (options.parseVari && memcmp(chunkName, "VARI", 4) == 0) ||
             (options.parseFunc && memcmp(chunkName, "FUNC", 4) == 0) ||
-            (options.parseStrg && memcmp(chunkName, "STRG", 4) == 0) ||
             (options.parseTxtr && memcmp(chunkName, "TXTR", 4) == 0) ||
             (options.parseAudo && memcmp(chunkName, "AUDO", 4) == 0);
 
@@ -1643,8 +1702,6 @@ DataWin* DataWin_parse(const char* filePath, DataWinParserOptions options) {
             parseVARI(&reader, dw, chunkLength);
         } else if (options.parseFunc && memcmp(chunkName, "FUNC", 4) == 0) {
             parseFUNC(&reader, dw);
-        } else if (options.parseStrg && memcmp(chunkName, "STRG", 4) == 0) {
-            parseSTRG(&reader, dw);
         } else if (options.parseTxtr && memcmp(chunkName, "TXTR", 4) == 0) {
             parseTXTR(&reader, dw, chunkEnd);
         } else if (options.parseAudo && memcmp(chunkName, "AUDO", 4) == 0) {
@@ -1674,6 +1731,9 @@ DataWin* DataWin_parse(const char* filePath, DataWinParserOptions options) {
     }
 
     fclose(file);
+
+    // Parsing is finished; free the string lookup table.
+    hmfree(dw->strOffsetMap);
 
     return dw;
 }
@@ -1853,6 +1913,8 @@ void DataWin_free(DataWin* dw) {
 
     // STRG
     free(dw->strg.strings);
+    // This should have been freed earlier, but just in case...
+    hmfree(dw->strOffsetMap);
 
     // TXTR
     if (dw->txtr.textures) {
