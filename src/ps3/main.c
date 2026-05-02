@@ -20,6 +20,7 @@
 #include "stb_image_write.h"
 
 #include "utils.h"
+#include "profiler.h"
 
 #include <io/pad.h>
 #include <sys/systime.h>
@@ -55,8 +56,10 @@ static double freq = 0;
 #define PS3_GET_TIME ((double)__builtin_ppc_get_timebase()/freq)
 bool shouldExit = false;
 
+// ===[ MAIN ]===
 int main(int argc, char* argv[]) {
     freq = sysGetTimebaseFrequency();
+
     printf("Loading %s...\n", DATAWIN_PATH);
 
     DataWin* dataWin = DataWin_parse(
@@ -87,7 +90,8 @@ int main(int argc, char* argv[]) {
             .parseAudo = true,
             .skipLoadingPreciseMasksForNonPreciseSprites = true,
             .lazyLoadRooms = true,
-       }
+            //.eagerlyLoadedRooms = args.eagerRooms
+        }
     );
 
     Gen8* gen8 = &dataWin->gen8;
@@ -95,11 +99,18 @@ int main(int argc, char* argv[]) {
 
     // Initialize VM
     VMContext* vm = VM_create(dataWin);
+
     Profiler_setEnabled(&vm->profiler, false);
+#ifdef ENABLE_VM_OPCODE_PROFILER
+    vm->opcodeProfilerEnabled = true;
+    if (vm->opcodeProfilerEnabled) {
+        vm->opcodeVariantCounts = safeCalloc(256 * 256, sizeof(uint64_t));
+        vm->opcodeRValueTypeCounts = safeCalloc(256 * 256, sizeof(uint64_t));
+    }
+#endif
 
     // Initialize the file system
     GlfwFileSystem* glfwFileSystem = GlfwFileSystem_create(DATAWIN_PATH);
-
 
     // Init GLFW
     ps3glInit();
@@ -115,6 +126,7 @@ int main(int argc, char* argv[]) {
     // Initialize the runner
     Runner* runner = Runner_create(dataWin, vm, renderer, (FileSystem*) glfwFileSystem, audioSystem);
     runner->debugMode = false;
+    //runner->osType = OS_PS3;
 
     // Initialize the first room and fire Game Start / Room Start events
     Runner_initFirstRoom(runner);
@@ -127,7 +139,7 @@ int main(int argc, char* argv[]) {
         // Clear last frame's pressed/released state, then poll new input events
         RunnerKeyboard_beginFrame(runner->keyboard);
         RunnerGamepad_beginFrame(runner->gamepads);
-  
+
 
         // Run the game step if the game is paused
         bool shouldStep = true;
@@ -197,27 +209,10 @@ int main(int argc, char* argv[]) {
         // The Port W/Port H controls the size of the game viewport within the application surface.
         // Think of it like if you had an image (or... well, a framebuffer) and you are "pasting" it over the application surface.
         // And the Port W/Port H are scaled by the window size too (set by the GEN8 chunk)
-        float displayScaleX = 1.0f;
-        float displayScaleY = 1.0f;
-        bool viewsEnabled = (activeRoom->flags & 1) != 0;
-        if (viewsEnabled) {
-            int32_t minLeft = INT32_MAX, minTop = INT32_MAX;
-            int32_t maxRight = INT32_MIN, maxBottom = INT32_MIN;
-            repeat(MAX_VIEWS, vi) {
-                RuntimeView* view = &runner->views[vi];
-                if (!view->enabled) continue;
-                if (minLeft > view->portX) minLeft = view->portX;
-                if (minTop > view->portY) minTop = view->portY;
-                int32_t right = view->portX + view->portWidth;
-                int32_t bottom = view->portY + view->portHeight;
-                if (right > maxRight) maxRight = right;
-                if (bottom > maxBottom) maxBottom = bottom;
-            }
-            if (maxRight > minLeft && maxBottom > minTop) {
-                displayScaleX = (float) gameW / (float) (maxRight - minLeft);
-                displayScaleY = (float) gameH / (float) (maxBottom - minTop);
-            }
-        }
+        float displayScaleX;
+        float displayScaleY;
+
+        Runner_computeViewDisplayScale(runner, gameW, gameH, &displayScaleX, &displayScaleY);
 
         renderer->vtable->beginFrame(renderer, gameW, gameH, fbWidth, fbHeight);
 
@@ -232,62 +227,7 @@ int main(int argc, char* argv[]) {
         }
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Render each enabled view (or a default full-screen view if views are disabled)
-        bool anyViewRendered = false;
-
-        if (viewsEnabled) {
-            repeat(MAX_VIEWS, vi) {
-                RuntimeView* view = &runner->views[vi];
-                if (!view->enabled) continue;
-
-                int32_t viewX = view->viewX;
-                int32_t viewY = view->viewY;
-                int32_t viewW = view->viewWidth;
-                int32_t viewH = view->viewHeight;
-                int32_t portX = (int32_t) ((float) view->portX * displayScaleX + 0.5f);
-                int32_t portY = (int32_t) ((float) view->portY * displayScaleY + 0.5f);
-                int32_t portW = (int32_t) ((float) view->portWidth * displayScaleX + 0.5f);
-                int32_t portH = (int32_t) ((float) view->portHeight * displayScaleY + 0.5f);
-                float viewAngle = view->viewAngle;
-
-                runner->viewCurrent = vi;
-                renderer->vtable->beginView(renderer, viewX, viewY, viewW, viewH, portX, portY, portW, portH, viewAngle);
-
-                Runner_draw(runner);
-
-                if (debugShowCollisionMasks) DebugOverlay_drawCollisionMasks(runner);
-
-                renderer->vtable->endView(renderer);
-
-                int32_t guiW = runner->guiWidth > 0 ? runner->guiWidth : portW;
-                int32_t guiH = runner->guiHeight > 0 ? runner->guiHeight : portH;
-                renderer->vtable->beginGUI(renderer, guiW, guiH, portX, portY, portW, portH);
-                Runner_drawGUI(runner);
-                renderer->vtable->endGUI(renderer);
-
-                anyViewRendered = true;
-            }
-        }
-
-        if (!anyViewRendered) {
-            // No views enabled or views disabled: render with default full-screen view
-            runner->viewCurrent = 0;
-            renderer->vtable->beginView(renderer, 0, 0, gameW, gameH, 0, 0, gameW, gameH, 0.0f);
-            Runner_draw(runner);
-
-            if (debugShowCollisionMasks) DebugOverlay_drawCollisionMasks(runner);
-
-            renderer->vtable->endView(renderer);
-
-            int32_t guiW = runner->guiWidth > 0 ? runner->guiWidth : gameW;
-            int32_t guiH = runner->guiHeight > 0 ? runner->guiHeight : gameH;
-            renderer->vtable->beginGUI(renderer, guiW, guiH, 0, 0, gameW, gameH);
-            Runner_drawGUI(runner);
-            renderer->vtable->endGUI(renderer);
-        }
-
-        // Reset view_current to 0 so non-Draw events (Step, Alarm, Create) see view_current = 0
-        runner->viewCurrent = 0;
+        Runner_drawViews(runner, gameW, gameH, displayScaleX, displayScaleY, debugShowCollisionMasks);
 
         renderer->vtable->endFrame(renderer);
 
@@ -295,6 +235,7 @@ int main(int argc, char* argv[]) {
 
         double now = PS3_GET_TIME;
 
+        // Limit frame rate to room speed
         if (runner->currentRoom->speed > 0) {
             double targetFrameTime = 1.0 / runner->currentRoom->speed;
             double nextFrameTime = lastFrameTime + targetFrameTime;
@@ -319,6 +260,9 @@ int main(int argc, char* argv[]) {
 
     Runner_free(runner);
     GlfwFileSystem_destroy(glfwFileSystem);
+#ifdef ENABLE_VM_OPCODE_PROFILER
+    VM_printOpcodeProfilerReport(vm);
+#endif
     VM_free(vm);
     DataWin_free(dataWin);
 
