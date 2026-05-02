@@ -142,7 +142,7 @@ elseif(PLATFORM STREQUAL "ps3")
     endif()
 
     option(I_WANT_MY_GAME_TO_LOOK_LIKE_ASS "Enable TPAG Resolution Halving to improve VRAM Constraints" OFF)
-    if(ENABLE_VM_GML_PROFILER)
+    if(I_WANT_MY_GAME_TO_LOOK_LIKE_ASS)
         add_compile_definitions(I_WANT_MY_GAME_TO_LOOK_LIKE_ASS=1)
     endif()
 
