@@ -52,9 +52,11 @@ target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(butterscotch PUBLIC vendor/stb/ds)
 
 if(PLATFORM STREQUAL "glfw")
-    file(GLOB GL_SOURCES src/gl/*.c)
+    file(GLOB GL_SOURCES src/gl/*.c src/gl_legacy/*.c src/image/*.c)
     target_sources(butterscotch PRIVATE ${GL_SOURCES})
     target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/gl)
+    target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/gl_legacy)
+    target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/image)
 
     # Butterscotch VM/interpreter profiler
     option(ENABLE_VM_GML_PROFILER "Enable Butterscotch VM/interpreter profiler" ON)
@@ -146,6 +148,61 @@ if(PLATFORM STREQUAL "glfw")
             ${CMAKE_SOURCE_DIR}/vendor/gamecontrollerdb.txt
             $<TARGET_FILE_DIR:butterscotch>/gamecontrollerdb.txt
     )
+elseif(PLATFORM STREQUAL "ps3")
+    file(GLOB GL_SOURCES src/gl_legacy/*.c src/image/*.c)
+    target_sources(butterscotch PRIVATE ${GL_SOURCES})
+    target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/gl_legacy)
+    target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/image)
+
+    if(ENABLE_VM_GML_PROFILER)
+        add_compile_definitions(I_WANT_MY_GAME_TO_LOOK_LIKE_ASS=1)
+    endif()
+
+    # Butterscotch VM/interpreter profiler
+    option(ENABLE_VM_GML_PROFILER "Enable Butterscotch VM/interpreter profiler" OFF)
+    if(ENABLE_VM_GML_PROFILER)
+        add_compile_definitions(ENABLE_VM_GML_PROFILER)
+    endif()
+
+    # Butterscotch VM/interpreter tracing
+    option(ENABLE_VM_TRACING "Enable Butterscotch VM/interpreter tracing checks" OFF)
+    if(ENABLE_VM_TRACING)
+        add_compile_definitions(ENABLE_VM_TRACING)
+    endif()
+
+    # Butterscotch VM opcode count profiler
+    option(ENABLE_VM_OPCODE_PROFILER "Enable Butterscotch VM opcode count profiler" OFF)
+    if(ENABLE_VM_OPCODE_PROFILER)
+        add_compile_definitions(ENABLE_VM_OPCODE_PROFILER)
+    endif()
+
+    # Spatial grid logs
+    option(ENABLE_SPATIAL_GRID_LOGS "Enable Spatial Grid logs" OFF)
+    if(ENABLE_SPATIAL_GRID_LOGS)
+        add_compile_definitions(ENABLE_SPATIAL_GRID_LOGS)
+    endif()
+
+    # VM unknown/stubbed function logs
+    option(ENABLE_VM_STUB_LOGS "Enable VM unknown/stubbed function logs" OFF)
+    if(ENABLE_VM_STUB_LOGS)
+        add_compile_definitions(ENABLE_VM_STUB_LOGS)
+    endif()
+
+    # stb_image
+    target_include_directories(butterscotch PUBLIC vendor/stb/image)
+
+    # stb_vorbis
+    target_include_directories(butterscotch PUBLIC vendor/stb/vorbis)
+
+    # miniaudio
+    target_include_directories(butterscotch PUBLIC vendor/miniaudio)
+
+    # Platform identifier for PS3-specific code paths
+    add_compile_definitions(PLATFORM_PS3)
+    add_compile_definitions(IS_BIG_ENDIAN)
+    set(CMAKE_EXE_LINKER_FLAGS "-mhard-float -fmodulo-sched -Wl,--gc-sections -L$ENV{PS3DEV}/ppu/lib -L$ENV{PS3DEV}/portlibs/ppu/lib")
+    target_link_libraries(butterscotch PRIVATE m gcm_sys rsx sysutil io audio rt lv2 io audio bz2)
+
 elseif(PLATFORM STREQUAL "ps2")
     # The PS2 EE has a single-precision FPU only, so double is software-emulated
     add_compile_definitions(USE_FLOAT_REALS)
