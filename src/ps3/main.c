@@ -15,7 +15,7 @@
 #include "debug_overlay.h"
 #include "gl_legacy_renderer.h"
 #include "glfw_file_system.h"
-#include "noop_audio_system.h"
+#include "ma_audio_system.h"
 #include "stb_ds.h"
 #include "stb_image_write.h"
 
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
 
 
     // Initialize the audio system
-    AudioSystem* audioSystem = (AudioSystem*) NoopAudioSystem_create();
+    AudioSystem* audioSystem = (AudioSystem*) MaAudioSystem_create();
 
     // Initialize the runner
     Runner* runner = Runner_create(dataWin, vm, renderer, (FileSystem*) glfwFileSystem, audioSystem);

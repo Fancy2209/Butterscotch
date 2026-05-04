@@ -197,7 +197,7 @@ elseif(PLATFORM STREQUAL "ps3")
     add_compile_definitions(PLATFORM_PS3)
     add_compile_definitions(IS_BIG_ENDIAN)
     set(CMAKE_EXE_LINKER_FLAGS "-mhard-float -fmodulo-sched -Wl,--gc-sections -L$ENV{PS3DEV}/ppu/lib -L$ENV{PS3DEV}/portlibs/ppu/lib")
-    target_link_libraries(butterscotch PRIVATE m gcm_sys rsx sysutil io audio rt lv2 io audio bz2)
+    target_link_libraries(butterscotch PRIVATE m SDL2 SDL2_main gcm_sys rsx sysutil io audio rt lv2 io audio bz2)
 
 elseif(PLATFORM STREQUAL "ps2")
     # The PS2 EE has a single-precision FPU only, so double is software-emulated
