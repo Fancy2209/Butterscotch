@@ -974,6 +974,10 @@ static Instance** takePersistentInstances(Runner* runner) {
             }
 #endif
 
+            // The spatial grid is recreated per room, so any cell coordinates the instance was tracking belong to the old grid and must not be reused.
+            arrsetlen(inst->collisionCells, 0);
+            inst->spatialGridDirty = false;
+
             arrput(carriedPersistent, inst);
         } else {
 #ifdef ENABLE_VM_TRACING

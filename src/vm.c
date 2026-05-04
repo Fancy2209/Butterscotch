@@ -3401,12 +3401,9 @@ RValue VM_executeCode(VMContext* ctx, int32_t codeIndex) {
     setCurrentCodeLocalsSlotMap(ctx);
 
     uint32_t localsCount = computeLocalsCount(ctx, code);
-    RValue localVars[MAX_CODE_LOCALS];
+    RValue localVars[MAX_CODE_LOCALS] = {0};
     ctx->localVars = localVars;
     ctx->localVarCount = localsCount;
-    repeat(localsCount, i) {
-        ctx->localVars[i].type = RVALUE_UNDEFINED;
-    }
 
     // Reset stack for top-level execution
     ctx->stack.top = 0;
@@ -3470,17 +3467,14 @@ RValue VM_callCodeIndex(VMContext* ctx, int32_t codeIndex, RValue* args, int32_t
     uint32_t localsCount = computeLocalsCount(ctx, code);
     // We use fixed-size arrays instead of VLAs because it seems that using multiple VLAs in a single function things get corrupted somehow?
     // So when you see this MAX_CODE_LOCALS and GML_MAX_ARGUMENTS, you can shake your fist in the air and say "damn you MIPS!!1"
-    RValue localVars[MAX_CODE_LOCALS];
+    RValue localVars[MAX_CODE_LOCALS] = {0};
     ctx->localVars = localVars;
     ctx->localVarCount = localsCount;
-    repeat(localsCount, i) {
-        ctx->localVars[i].type = RVALUE_UNDEFINED;
-    }
 
     // Store arguments in scriptArgs (mirrors GMS 1.4's global argument stack).
     // Callee takes an INDEPENDENT reference for strings (strdup) and arrays (incRef) so
     // the caller's original args remain valid and owner-tracked by the caller.
-    RValue scriptArgs[GML_MAX_ARGUMENTS];
+    RValue scriptArgs[GML_MAX_ARGUMENTS] = {0};
     ctx->scriptArgs = scriptArgs;
     ctx->scriptArgCount = argCount;
     if (argCount > 0 && args != nullptr) {

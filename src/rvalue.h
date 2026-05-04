@@ -36,12 +36,12 @@ uint32_t Instance_getInstanceId(struct Instance* inst);
 
 // ===[ RValue - Tagged Union ]===
 typedef enum {
-    RVALUE_REAL = 0,
+    RVALUE_UNDEFINED = 0,
     RVALUE_STRING = 1,
     RVALUE_INT32 = 2,
     RVALUE_INT64 = 3,
     RVALUE_BOOL = 4,
-    RVALUE_UNDEFINED = 5,
+    RVALUE_REAL = 5,
     RVALUE_ARRAY = 6,
     RVALUE_METHOD = 7,
     RVALUE_STRUCT = 8,
