@@ -3891,6 +3891,7 @@ typedef ma_uint16 wchar_t;
     #ifndef MA_NO_RUNTIME_LINKING
     #define MA_NO_RUNTIME_LINKING
     #endif
+
 #endif
 #if !defined(MA_WIN32) && !defined(MA_DOS)    /* If it's not Win32, assume POSIX. */
     #define MA_POSIX
@@ -17562,14 +17563,14 @@ MA_API ma_result ma_spinlock_unlock(volatile ma_spinlock* pSpinlock)
 }
 
 
-#ifndef MA_NO_THREADING
+//#ifndef MA_NO_THREADING
 #if defined(MA_POSIX)
     #define MA_THREADCALL
     typedef void* ma_thread_result;
 #elif defined(MA_WIN32)
     #define MA_THREADCALL WINAPI
     typedef unsigned long ma_thread_result;
-#endif
+//#endif
 
 typedef ma_thread_result (MA_THREADCALL * ma_thread_entry_proc)(void* pData);
 
