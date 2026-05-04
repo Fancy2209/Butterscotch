@@ -9,6 +9,9 @@
 #include "stb_vorbis.c"
 
 #define MINIAUDIO_IMPLEMENTATION
+#define MA_NO_THREADING
+#define MA_NO_RUNTIME_LINKING
+#define MA_NO_PTHREAD_IN_HEADER
 #include "miniaudio.h"
 
 #include "ma_audio_system.h"
