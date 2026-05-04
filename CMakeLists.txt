@@ -154,10 +154,6 @@ elseif(PLATFORM STREQUAL "ps3")
     target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/gl_legacy)
     target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/image)
 
-    if(ENABLE_VM_GML_PROFILER)
-        add_compile_definitions(I_WANT_MY_GAME_TO_LOOK_LIKE_ASS=1)
-    endif()
-
     # Butterscotch VM/interpreter profiler
     option(ENABLE_VM_GML_PROFILER "Enable Butterscotch VM/interpreter profiler" OFF)
     if(ENABLE_VM_GML_PROFILER)
