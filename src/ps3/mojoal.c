@@ -25,7 +25,6 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
-//#include "SDL.h"
 #include <SDL2/SDL.h>
 
 /* really old SDL2 headers don't have SDL_clamp. */
