@@ -401,7 +401,7 @@ static void maPauseAll(AudioSystem* audio) {
     repeat(MAX_SOUND_INSTANCES, i) {
         SoundInstance* inst = &ma->instances[i];
         if (inst->active && alSourceIsPlaying(inst->alSource)) {
-            alSourceStop(inst->alSource);
+            alSourcePause(inst->alSource);
         }
     }
 }
