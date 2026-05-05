@@ -2283,7 +2283,11 @@ static void handlePushEnv(VMContext* ctx, uint32_t instr, uint32_t instrAddr) {
         return;
     }
 
-    fprintf(stderr, "VM: [%s] PushEnv with unhandled target %d\n", ctx->currentCodeName, target);
+    if (0 > target) {
+        fprintf(stderr, "VM: [%s] PushEnv with negative target %d, this could be a Int64 number that is getting truncated to Int32!\n", ctx->currentCodeName, target);
+    } else {
+        fprintf(stderr, "VM: [%s] PushEnv with unhandled target %d\n", ctx->currentCodeName, target);
+    }
     ctx->ip = instrAddr + jumpOffset;
 }
 
@@ -3195,7 +3199,8 @@ VMContext* VM_create(DataWin* dataWin) {
     uint32_t maxGlobalVarID = 0;
     forEach(Variable, v, dataWin->vari.variables, dataWin->vari.variableCount) {
         if (0 > v->varID) continue;
-        if (v->instanceType == INSTANCE_GLOBAL) {
+        // In BC17 any varID can be used as a global variable
+        if (IS_BC17_OR_HIGHER(ctx) || v->instanceType == INSTANCE_GLOBAL) {
             if ((uint32_t) v->varID + 1 > maxGlobalVarID) maxGlobalVarID = (uint32_t) v->varID + 1;
         }
     }
