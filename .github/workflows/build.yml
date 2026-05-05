@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, ps3_audio_openal]
   pull_request:
-    branches: [main]
+    branches: [main, ps3_audio_openal]
 
 jobs:
   build-glfw-linux-x86_64:
