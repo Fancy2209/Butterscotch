@@ -23,8 +23,8 @@
   #define M_PI (3.14159265358979323846264338327950288)
 #endif
 
-#include "al.h"
-#include "alc.h"
+#include "AL/al.h"
+#include "AL/alc.h"
 //#include "SDL.h"
 #include <SDL2/SDL.h>
 
