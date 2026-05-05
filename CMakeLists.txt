@@ -190,12 +190,15 @@ elseif(PLATFORM STREQUAL "ps3")
     # stb_vorbis
     target_include_directories(butterscotch PUBLIC vendor/stb/vorbis)
 
-    # miniaudio
-    target_include_directories(butterscotch PUBLIC vendor/miniaudio)
-
     # Platform identifier for PS3-specific code paths
     add_compile_definitions(PLATFORM_PS3)
     add_compile_definitions(IS_BIG_ENDIAN)
+    add_compile_definitions(AL_LIBTYPE_STATIC)
+
+    find_package(SDL2 REQUIRED)
+    target_include_directories(butterscotch PRIVATE ${SDL2_INCLUDE_DIRS})
+    target_link_libraries(butterscotch ${SDL2_LIBRARIES})
+
     set(CMAKE_EXE_LINKER_FLAGS "-mhard-float -fmodulo-sched -Wl,--gc-sections -L$ENV{PS3DEV}/ppu/lib -L$ENV{PS3DEV}/portlibs/ppu/lib")
     target_link_libraries(butterscotch PRIVATE m gcm_sys rsx sysutil io audio rt lv2 io audio bz2)
 
