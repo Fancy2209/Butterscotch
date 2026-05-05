@@ -51,7 +51,7 @@ static void alGetSourceLengthSec(ALuint buffer, float* out) {
     int lengthInSamples = sizeInBytes * 8 / (channels * bits);
     ALint frequency;
 
-    alGetBufferi(*buffer, AL_FREQUENCY, &frequency);
+    alGetBufferi(buffer, AL_FREQUENCY, &frequency);
 
     *out = (float)lengthInSamples / (float)frequency;
 }
@@ -121,14 +121,14 @@ static void maInit(AudioSystem* audio, DataWin* dataWin, FileSystem* fileSystem)
     ma->alContext = alcCreateContext(ma->alDevice, nullptr);
     alcMakeContextCurrent(ma->alContext);
     if (ma->alDevice == nullptr || ma->alContext == nullptr) {
-        fprintf(stderr, "Audio: Failed to initialize miniaudio engine (error %d)\n", alGetError());
+        fprintf(stderr, "Audio: Failed to initialize OpenAL engine (error %d)\n", alGetError());
         return;
     }
 
     memset(ma->instances, 0, sizeof(ma->instances));
     ma->nextInstanceCounter = 0;
 
-    fprintf(stderr, "Audio: miniaudio engine initialized\n");
+    fprintf(stderr, "Audio: OpenAL engine initialized\n");
 }
 
 static void maDestroy(AudioSystem* audio) {
@@ -159,8 +159,8 @@ static void maDestroy(AudioSystem* audio) {
     arrfree(ma->base.audioGroups);
 
     alcMakeContextCurrent(nullptr);
-    alcDestroyContext(ma->alcDevice, ma->alcContext);
-    alcCloseDevice(ma->alcDevice);
+    alcDestroyContext(ma->alContext);
+    alcCloseDevice(ma->alDevice);
     free(ma);
 }
 
@@ -224,23 +224,24 @@ static int32_t maPlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prior
     }
 
     int32_t slotIndex = (int32_t) (slot - ma->instances);
-
-    alGenBuffers(1, &slot->alBuffer);
+    
     alGenSources(1, &slot->alSource);
+    alGenBuffers(1, &slot->alBuffer);
     alSourcei(slot->alSource, AL_BUFFER, slot->alBuffer);
+
     if (isStream) {
         int channels;
         int sample_rate;
-        void* data;
+        short* data;
         int len = stb_vorbis_decode_filename(streamPath, &channels, &sample_rate, &data);
-            alBufferData(
-                slot->alBuffer, 
-                (channels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16, 
-                data, 
-                len*channels*sizeof(uint16_t), 
-                sample_rate
-            );
-            free(data);
+        alBufferData(
+            slot->alBuffer, 
+            (channels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16, 
+            (void*)data, 
+            len*channels*sizeof(uint16_t), 
+            sample_rate
+        );
+        free(data);
     } else {
         bool isEmbedded = (sound->flags & 0x01) != 0;
         bool isCompressed = (sound->flags & 0x02) != 0;
@@ -256,17 +257,16 @@ static int32_t maPlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prior
             
             int channels;
             int sample_rate;
-            void* data;
+            short* data;
             int len = stb_vorbis_decode_memory(entry->data, entry->dataSize, &channels, &sample_rate, &data);
             alBufferData(
                 slot->alBuffer, 
                 (channels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16, 
-                data, 
+                (void*)data, 
                 len*channels*sizeof(uint16_t), 
                 sample_rate
             );
             free(data);
-            }
         } else {
             // External audio: load from file
             char* path = resolveExternalPath(ma, sound);
@@ -277,12 +277,12 @@ static int32_t maPlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prior
 
             int channels;
             int sample_rate;
-            void* data;
+            short* data;
             int len = stb_vorbis_decode_filename(path, &channels, &sample_rate, &data);
             alBufferData(
                 slot->alBuffer, 
                 (channels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16, 
-                data, 
+                (void*)data, 
                 len*channels*sizeof(uint16_t), 
                 sample_rate
             );
@@ -328,8 +328,8 @@ static void maStopSound(AudioSystem* audio, int32_t soundOrInstance) {
         SoundInstance* inst = findInstanceById(ma, soundOrInstance);
         if (inst != nullptr) {
             alSourceStop(inst->alSource);
-            alDeleteSources(1, &ma->instances[i].alSource);
-            alDeleteBuffers(1, &ma->instances[i].alBuffer);
+            alDeleteSources(1, &inst->alSource);
+            alDeleteBuffers(1, &inst->alBuffer);
             inst->active = false;
         }
     } else {
@@ -384,13 +384,13 @@ static void maPauseSound(AudioSystem* audio, int32_t soundOrInstance) {
     if (soundOrInstance >= SOUND_INSTANCE_ID_BASE) {
         SoundInstance* inst = findInstanceById(ma, soundOrInstance);
         if (inst != nullptr) {
-            alSourceStop(inst->alSource);
+            alSourcePause(inst->alSource);
         }
     } else {
         repeat(MAX_SOUND_INSTANCES, i) {
             SoundInstance* inst = &ma->instances[i];
             if (inst->active && inst->soundIndex == soundOrInstance) {
-                alSourceStop(inst->alSource);
+                alSourcePause(inst->alSource);
             }
         }
     }
@@ -520,7 +520,7 @@ static float maGetSoundPitch(AudioSystem* audio, int32_t soundOrInstance) {
         repeat(MAX_SOUND_INSTANCES, i) {
             SoundInstance* inst = &ma->instances[i];
             if (inst->active && inst->soundIndex == soundOrInstance) {
-                return alGetSourcef(inst->alSource, AL_PITCH, &pitch);
+                alGetSourcef(inst->alSource, AL_PITCH, &pitch);
             }
         }
     }
@@ -534,7 +534,7 @@ static float maGetTrackPosition(AudioSystem* audio, int32_t soundOrInstance) {
         SoundInstance* inst = findInstanceById(ma, soundOrInstance);
         if (inst != nullptr) {
             float cursor;
-            alGetSourcef(source, AL_SEC_OFFSET, &cursor);
+            alGetSourcef(inst->alSource, AL_SEC_OFFSET, &cursor);
             return cursor;
         }
     } else {
@@ -542,7 +542,7 @@ static float maGetTrackPosition(AudioSystem* audio, int32_t soundOrInstance) {
             SoundInstance* inst = &ma->instances[i];
             if (inst->active && inst->soundIndex == soundOrInstance) {
                 float cursor;
-                alGetSourcef(source, AL_SEC_OFFSET, &cursor);
+                alGetSourcef(inst->alSource, AL_SEC_OFFSET, &cursor);
                 return cursor;
             }
         }
@@ -587,7 +587,7 @@ static float maGetSoundLength(AudioSystem* audio, int32_t soundOrInstance) {
     if (match == nullptr) return 0.0f;
 
     float seconds = 0.0f;
-    alGetSourceLengthSec(&match->alSource, &seconds);
+    alGetSourceLengthSec(match->alBuffer, &seconds);
     return seconds;
 }
 
