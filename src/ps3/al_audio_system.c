@@ -1,5 +1,6 @@
 // On Windows, include windows.h first so its headers are processed before stb_vorbis
 // defines single-letter macros (L, C, R) that conflict with winnt.h struct field names.
+#include "wave.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -246,27 +247,7 @@ static int32_t maPlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prior
         bool isCompressed = (sound->flags & 0x02) != 0;
 
         if (isEmbedded || isCompressed) {
-            // Embedded audio: decode from AUDO chunk memory
-            if (0 > sound->audioFile || (uint32_t) sound->audioFile >= ma->base.audioGroups[sound->audioGroup]->audo.count) {
-                fprintf(stderr, "Audio: Invalid audio file index %d for sound '%s'\n", sound->audioFile, sound->name);
-                return -1;
-            }
-
-            AudioEntry* entry = &ma->base.audioGroups[sound->audioGroup]->audo.entries[sound->audioFile];
-            
-            int channels;
-            int sample_rate;
-            short* data = NULL;
-            int len = stb_vorbis_decode_memory(entry->data, entry->dataSize, &channels, &sample_rate, &data);
-            alBufferData(
-                slot->alBuffer, 
-                (channels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16, 
-                (void*)data, 
-                len*channels*sizeof(uint16_t), 
-                sample_rate
-            );
-            alSourcei(slot->alSource, AL_BUFFER, slot->alBuffer);
-            if(data != NULL) free(data);
+           return -1;
         } else {
             // External audio: load from file
             char* path = resolveExternalPath(ma, sound);
