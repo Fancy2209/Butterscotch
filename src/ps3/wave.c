@@ -3,6 +3,7 @@
 #include "wave.h"
 #include <stdio.h>
 #include <string.h>
+#include "../binary_utils.h"
 
 // Convert 32-bit unsigned little-endian value to big-endian from byte array
 static inline uint32_t little2big_u32(uint8_t const* data) {
@@ -71,6 +72,18 @@ WAVFile WAV_ParseFileData(uint8_t const* data) {
 
   file.data = data_ptr;
   file.data_length = file.header.data_size;
+
+  if (file.header.bits_per_sample == 16) {
+    for (size_t i = 0; i < (file.header.data_size / 2); i++) {
+        uint8_t* p = (uint8_t*)file.data + i * 2;
+
+        uint16_t val = (uint16_t)(p[0] | (p[1] << 8));
+        val = BinaryUtils_toLittle16(val);
+
+        p[0] = (uint8_t)(val & 0xFF);
+        p[1] = (uint8_t)(val >> 8);
+      }
+  }
 
   return file;
 }
