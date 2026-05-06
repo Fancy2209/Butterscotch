@@ -308,8 +308,8 @@ static int32_t maPlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prior
     float pitch = isStream ? 1.0f : sound->pitch;
     alSourcef(slot->alSource, AL_GAIN, volume);
 
-    if (pitch != 1.0f && pitch != 0.0f) {
-        alSourcef(slot->alSource, AL_PITCH, pitch);
+    if (pitch != 1.0f) {
+        alSourcef(slot->alSource, AL_PITCH, pitch != 0.0f ? pitch : 1.0f);
     }
     alSourcei(slot->alSource, AL_LOOPING, loop ? AL_TRUE : AL_FALSE);
 
