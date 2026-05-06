@@ -25,6 +25,7 @@
 #include <io/pad.h>
 #include <sys/systime.h>
 #include <sys/thread.h>
+#include <sysutil/sysutil.h>
 
 typedef struct {
     uint8_t digital;
@@ -58,7 +59,25 @@ static double freq = 0;
 bool shouldExit = false;
 
 // ===[ MAIN ]===
+
+static void sys_callback(uint64_t status, uint64_t param, void* userdata)
+{
+    switch (status) {
+        case SYSUTIL_EXIT_GAME:
+            shouldExit = true;
+            break;
+        
+        case SYSUTIL_MENU_OPEN:
+        case SYSUTIL_MENU_CLOSE:
+            break;
+
+        default:
+            break;
+    }
+}
+
 int main(int argc, char* argv[]) {
+    sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, sys_callback, NULL);
     freq = sysGetTimebaseFrequency();
 
     printf("Loading %s...\n", DATAWIN_PATH);
@@ -248,6 +267,7 @@ int main(int argc, char* argv[]) {
 
         renderer->vtable->endFrame(renderer);
 
+        sysUtilCheckCallback();
         ps3glSwapBuffers();
 
         double now = PS3_GET_TIME;
@@ -283,6 +303,7 @@ int main(int argc, char* argv[]) {
     VM_free(vm);
     DataWin_free(dataWin);
 
+    sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
     printf("Bye! :3\n");
     return 0;
 }
