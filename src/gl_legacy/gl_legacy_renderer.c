@@ -3,8 +3,8 @@
 #include "text_utils.h"
 
 #ifdef PLATFORM_PS3
-#include "../ps3/ps3gl.h"
-#include "../ps3/rsxutil.h"
+#include "ps3gl.h"
+#include "rsxutil.h"
 GLAPI void GLAPIENTRY glActiveTexture( GLenum texture ) {};
 #else
 #include <glad/glad.h>

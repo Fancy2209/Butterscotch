@@ -3,8 +3,8 @@
 #include "common.h"
 #include "renderer.h"
 #ifdef PLATFORM_PS3
-#include "../ps3/ps3gl.h"
-#include "../ps3/rsxutil.h"
+#include "ps3gl.h"
+#include "rsxutil.h"
 #else
 #include <glad/glad.h>
 #endif
