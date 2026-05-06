@@ -14,7 +14,7 @@
 #include "input_recording.h"
 #include "debug_overlay.h"
 #include "gl_legacy_renderer.h"
-#include "glfw_file_system.h"
+#include "overlay_file_system.h"
 #include "al_audio_system.h"
 #include "stb_ds.h"
 #include "stb_image_write.h"
@@ -50,6 +50,7 @@ static const int PAD_MAPPING_COUNT = sizeof(PAD_MAPPINGS) / sizeof(PAD_MAPPINGS[
 static bool prevState[sizeof(PAD_MAPPINGS) / sizeof(PAD_MAPPINGS[0])] = {0};
 
 #define DATAWIN_PATH "/dev_hdd0/BUTTERSCOTCH/data.win"
+static const char* dataWinPath = DATAWIN_PATH;
 
 // ===[ MAIN ]===
 static double freq = 0; 
@@ -110,7 +111,23 @@ int main(int argc, char* argv[]) {
 #endif
 
     // Initialize the file system
-    GlfwFileSystem* glfwFileSystem = GlfwFileSystem_create(DATAWIN_PATH);
+    char* dataWinDir = nullptr;
+    {
+        const char* lastSlash = strrchr(dataWinPath, '/');
+        const char* lastBackslash = strrchr(dataWinPath, '\\');
+        if (lastBackslash != nullptr && (lastSlash == nullptr || lastBackslash > lastSlash))
+            lastSlash = lastBackslash;
+        if (lastSlash != nullptr) {
+            size_t len = (size_t) (lastSlash - dataWinPath + 1);
+            dataWinDir = safeMalloc(len + 1);
+            memcpy(dataWinDir, dataWinPath, len);
+            dataWinDir[len] = '\0';
+        } else {
+            dataWinDir = safeStrdup("./");
+        }
+    }
+    const char* savePath = dataWinDir;
+    OverlayFileSystem* overlayFs = OverlayFileSystem_create(dataWinDir, savePath);
 
     // Init GLFW
     ps3glInit();
@@ -124,7 +141,7 @@ int main(int argc, char* argv[]) {
     AudioSystem* audioSystem = (AudioSystem*) AlAudioSystem_create();
 
     // Initialize the runner
-    Runner* runner = Runner_create(dataWin, vm, renderer, (FileSystem*) glfwFileSystem, audioSystem);
+    Runner* runner = Runner_create(dataWin, vm, renderer, (FileSystem*) overlayFs, audioSystem);
     runner->debugMode = false;
     //runner->osType = OS_PS3;
 
@@ -259,7 +276,7 @@ int main(int argc, char* argv[]) {
     renderer->vtable->destroy(renderer);
 
     Runner_free(runner);
-    GlfwFileSystem_destroy(glfwFileSystem);
+    OverlayFileSystem_destroy(overlayFs);
 #ifdef ENABLE_VM_OPCODE_PROFILER
     VM_printOpcodeProfilerReport(vm);
 #endif
