@@ -10,7 +10,7 @@
 #include "al_audio_system.h"
 #include "data_win.h"
 #include "utils.h"
-#include "wave/wave.h"
+#include "wave.h"
 
 #include <stdio.h>
 #include <stdlib.h>
