@@ -10,6 +10,7 @@
 #include "al_audio_system.h"
 #include "data_win.h"
 #include "utils.h"
+#include "wave/wave.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -246,7 +247,37 @@ static int32_t maPlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prior
         bool isCompressed = (sound->flags & 0x02) != 0;
 
         if (isEmbedded || isCompressed) {
-           return -1;
+           // Embedded audio: decode from AUDO chunk memory
+            if (0 > sound->audioFile || (uint32_t) sound->audioFile >= ma->base.audioGroups[sound->audioGroup]->audo.count) {
+                fprintf(stderr, "Audio: Invalid audio file index %d for sound '%s'\n", sound->audioFile, sound->name);
+                return -1;
+            }
+
+            AudioEntry* entry = &ma->base.audioGroups[sound->audioGroup]->audo.entries[sound->audioFile];
+            WAVFile wav = WAV_ParseFileData(entry->data);
+
+            uint32_t format;
+            if (wav.header.number_of_channels == 1)
+            {
+                if (wav.header.bits_per_sample == 8)
+                    format = AL_FORMAT_MONO8;
+                else 
+                    format = AL_FORMAT_MONO16;
+            }
+            else {
+                if (wav.header.bits_per_sample == 8)
+                    format = AL_FORMAT_STEREO8;
+                else
+                    format = AL_FORMAT_STEREO16;
+            }
+            alBufferData(
+                slot->alBuffer, 
+                format, 
+                wav.data, 
+                wav.data_length, 
+                wav.header.sample_rate
+            );
+            alSourcei(slot->alSource, AL_BUFFER, slot->alBuffer);
         } else {
             // External audio: load from file
             char* path = resolveExternalPath(ma, sound);
