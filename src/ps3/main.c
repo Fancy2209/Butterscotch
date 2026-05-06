@@ -305,5 +305,6 @@ int main(int argc, char* argv[]) {
 
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
     printf("Bye! :3\n");
+    exit(0);
     return 0;
 }
