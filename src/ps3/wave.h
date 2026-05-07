@@ -57,7 +57,7 @@ typedef struct WAVFile_t {
   WAVHeader header;
 
   // Pointer to audio data
-  uint8_t const* data;
+  uint8_t* data;
 
   // Length of data, copy of header.data_size field
   uint32_t data_length;
