@@ -60,7 +60,7 @@ target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(butterscotch PUBLIC vendor/stb/ds)
 
 if(PLATFORM STREQUAL "glfw")
-    file(GLOB GL_SOURCES src/gl/*.c)
+    file(GLOB GL_SOURCES src/gl/*.c src/image/*.c src/gl_legacy/*.c)
     target_sources(butterscotch PRIVATE ${GL_SOURCES})
     target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/gl)
 
@@ -155,7 +155,7 @@ if(PLATFORM STREQUAL "glfw")
             $<TARGET_FILE_DIR:butterscotch>/gamecontrollerdb.txt
     )
 elseif(PLATFORM STREQUAL "web")
-    file(GLOB GL_SOURCES src/gl/*.c)
+    file(GLOB GL_SOURCES src/gl/*.c src/image/*.c)
     target_sources(butterscotch PRIVATE ${GL_SOURCES})
     add_compile_definitions(ENABLE_GLES)
 
