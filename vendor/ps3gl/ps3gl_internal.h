@@ -70,6 +70,7 @@ struct ps3gl_opengl_state
 	} viewport;
 
 	struct {
+		GLboolean enabled;
 		GLushort x,y,w,h;
 	} scissor;
 

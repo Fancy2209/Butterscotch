@@ -2,6 +2,7 @@
 #include "matrix_math.h"
 #include "text_utils.h"
 
+
 #ifdef PLATFORM_PS3
 #include "ps3gl.h"
 #include "rsxutil.h"
@@ -244,7 +245,6 @@ static bool ensureTextureLoaded(GLLegacyRenderer* gl, uint32_t pageId) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     free(pixels);
-    free(txtr->blobData);
     fprintf(stderr, "GL: Loaded TXTR page %u (%dx%d)\n", pageId, w, h);
     return true;
 }

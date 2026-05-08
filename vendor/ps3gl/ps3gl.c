@@ -164,8 +164,36 @@ void glEnable( GLenum cap )
 		case GL_TEXTURE_2D:
 			_opengl_state.texture0_enabled = true;
 			break;
+		case GL_SCISSOR_TEST
+			_opengl_state.scissor.enabled = true;
+			break;
 		default:
 			break;
+	}
+}
+
+GLboolean glIsEnabled( GLenum cap )
+{
+	switch(cap)
+	{
+		case GL_ALPHA_TEST:
+			return _opengl_state.alpha_test_enabled;
+		case GL_BLEND:
+			return _opengl_state.blend_enabled;
+		case GL_CULL_FACE:
+			return _opengl_state.cull_face_enabled;
+		case GL_COLOR_LOGIC_OP:
+			return _opengl_state.logic_op_enabled;
+		case GL_DEPTH_TEST:
+			return _opengl_state.depth_test;
+		case GL_FOG:
+			return _opengl_state.fog_enabled;
+		case GL_TEXTURE_2D:
+			return _opengl_state.texture0_enabled;
+		case GL_SCISSOR_TEST
+			return _opengl_state.scissor.enabled;
+		default:
+			return false;
 	}
 }
 
@@ -193,6 +221,9 @@ void glDisable( GLenum cap )
 			break;
 		case GL_TEXTURE_2D:
 			_opengl_state.texture0_enabled = false;
+			break;
+		case GL_SCISSOR_TEST
+			_opengl_state.scissor.enabled = false;
 			break;
 		default:
 			break;
@@ -1140,13 +1171,20 @@ void _setup_draw_env(void)
 		_opengl_state.viewport.offset
 	);
 
-	// TODO: Implement glScissor
-	rsxSetScissor(context, 
-		_opengl_state.scissor.x, 
-		_opengl_state.scissor.y, 
-		_opengl_state.scissor.w, 
-		_opengl_state.scissor.h
-	);
+	if(_opengl_state.scissor.enabled)
+		rsxSetScissor(context, 
+			_opengl_state.scissor.x, 
+			_opengl_state.scissor.y, 
+			_opengl_state.scissor.w, 
+			_opengl_state.scissor.h
+		);
+	else
+			rsxSetScissor(context, 
+			_opengl_state.viewport.x, 
+			_opengl_state.viewport.y, 
+			_opengl_state.viewport.w, 
+			_opengl_state.viewport.h
+		);
 
 	// Load Current Texture
 	_ps3gl_load_texture();
