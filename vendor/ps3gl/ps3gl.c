@@ -164,7 +164,7 @@ void glEnable( GLenum cap )
 		case GL_TEXTURE_2D:
 			_opengl_state.texture0_enabled = true;
 			break;
-		case GL_SCISSOR_TEST
+		case GL_SCISSOR_TEST:
 			_opengl_state.scissor.enabled = true;
 			break;
 		default:
@@ -190,7 +190,7 @@ GLboolean glIsEnabled( GLenum cap )
 			return _opengl_state.fog_enabled;
 		case GL_TEXTURE_2D:
 			return _opengl_state.texture0_enabled;
-		case GL_SCISSOR_TEST
+		case GL_SCISSOR_TEST:
 			return _opengl_state.scissor.enabled;
 		default:
 			return false;
@@ -222,7 +222,7 @@ void glDisable( GLenum cap )
 		case GL_TEXTURE_2D:
 			_opengl_state.texture0_enabled = false;
 			break;
-		case GL_SCISSOR_TEST
+		case GL_SCISSOR_TEST:
 			_opengl_state.scissor.enabled = false;
 			break;
 		default:
