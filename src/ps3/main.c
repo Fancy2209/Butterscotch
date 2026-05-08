@@ -26,6 +26,8 @@
 #include <sys/systime.h>
 #include <sys/thread.h>
 #include <sysutil/sysutil.h>
+#include <ppu_intrinsics.h>
+#include "stb_easy_font.h"
 
 typedef struct {
     uint8_t digital;
@@ -184,7 +186,6 @@ int main(int argc, char* argv[]) {
             if (shouldStep) fprintf(stderr, "Debug: Frame advance (frame %d)\n", runner->frameCount);
         }
 
-        double frameStartTime = 0;
 
         padInfo padinfo;
         ioPadGetInfo(&padinfo);
@@ -216,6 +217,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        double frameStartTime = PS3_GET_TIME;
         if (shouldStep) {
 
             // Run one game step (Begin Step, Keyboard, Alarms, Step, End Step, room transitions)
@@ -267,6 +269,31 @@ int main(int argc, char* argv[]) {
 
         renderer->vtable->endFrame(renderer);
 
+        char debugText[512];
+        snprintf(debugText, sizeof(debugText),
+                "Step: %.2fms\n",
+                (double)((PS3_GET_TIME * 1000.0f) - (frameStartTime * 1000.0f)));
+        char buffer[99999];
+        int num_quads = stb_easy_font_print(
+            10.0f,
+            10.0f,
+            debugText,
+            NULL,
+            buffer,
+            sizeof(buffer)
+        );
+        glDisable(GL_TEXTURE_2D);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glBegin(GL_QUADS);
+        for (int i = 0; i < num_quads * 4; i++)
+        {
+            glVertex2f(
+                *(float *)(buffer + i * 16),
+                *(float *)(buffer + i * 16 + 4)
+            );
+        }
+        glEnd();
+        glEnable(GL_TEXTURE_2D);
         sysUtilCheckCallback();
         ps3glSwapBuffers();
 
@@ -278,7 +305,10 @@ int main(int argc, char* argv[]) {
             double nextFrameTime = lastFrameTime + targetFrameTime;
 
             if (now < nextFrameTime) {
-                while (PS3_GET_TIME < nextFrameTime) {}
+                while (PS3_GET_TIME < nextFrameTime) {
+                    __sync();
+                    sysUtilCheckCallback();
+                }
                 lastFrameTime = nextFrameTime;
             } else {
                 // Frame took too long → resync
@@ -304,7 +334,8 @@ int main(int argc, char* argv[]) {
     DataWin_free(dataWin);
 
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
+	gcmSetWaitFlip(context);
+	rsxFinish(context,1);
     printf("Bye! :3\n");
-    exit(0);
     return 0;
 }
