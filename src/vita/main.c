@@ -16,7 +16,7 @@
 #include "debug_overlay.h"
 #include "gl_renderer.h"
 #include "overlay_file_system.h"
-#include "al_audio_system.h"
+#include "noop_audio_system.h"
 #include "stb_ds.h"
 #include "stb_image_write.h"
 
@@ -78,7 +78,6 @@ int main(int argc, char* argv[]) {
     // Initialize VM
     VMContext* vm = VM_create(dataWin);
 
-
     // Initialize the file system
     char* dataWinDir = nullptr;
     {
@@ -100,6 +99,11 @@ int main(int argc, char* argv[]) {
     free(dataWinDir);
 
     // Init GLFW
+    scePowerSetArmClockFrequency(444);
+	scePowerSetBusClockFrequency(222);
+	scePowerSetGpuClockFrequency(222);
+	scePowerSetGpuXbarClockFrequency(166);
+	vglUseTripleBuffering(GL_FALSE);
 	vglInitWithCustomThreshold(0, 960, 544, 16 * 1024 * 1024, 32 * 1024 * 1024, 0, 26 * 1024 * 1024, SCE_GXM_MULTISAMPLE_NONE);
     sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_WIDE);
 

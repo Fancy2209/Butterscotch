@@ -460,7 +460,7 @@ elseif(PLATFORM STREQUAL "vita")
     target_include_directories(butterscotch PRIVATE ${SDL2_INCLUDE_DIRS})
     target_link_libraries(butterscotch PRIVATE openal bz2 vitaGL stdc++ SceAudio_stub SceAudioIn_stub SceLibKernel_stub SceAppMgr_stub SceAppUtil_stub mathneon
 	c SceCommonDialog_stub m SceGxm_stub SceDisplay_stub SceSysmodule_stub
-	vitashark SceShaccCg_stub SceKernelDmacMgr_stub stdc++ SceCtrl_stub
+	vitashark SceShaccCg_stub SceKernelDmacMgr_stub stdc++ ScePower_stub SceCtrl_stub
 	pthread SceShaccCgExt taihen_stub)
     vita_create_self(${PROJECT_NAME}.self ${PROJECT_NAME})
     # The FILE directive lets you add additional files to the VPK, the syntax is
