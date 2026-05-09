@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
+if(PLATFORM STREQUAL "vita")
+set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE PATH "toolchain file")
+endif()
 project(butterscotch C)
 
 set(CMAKE_C_STANDARD 99)
@@ -413,36 +416,6 @@ elseif(PLATFORM STREQUAL "ps3")
     target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/vendor/ps3gl)
     target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mojoal)
 
-    # Butterscotch VM/interpreter profiler
-    option(ENABLE_VM_GML_PROFILER "Enable Butterscotch VM/interpreter profiler" OFF)
-    if(ENABLE_VM_GML_PROFILER)
-        add_compile_definitions(ENABLE_VM_GML_PROFILER)
-    endif()
-
-    # Butterscotch VM/interpreter tracing
-    option(ENABLE_VM_TRACING "Enable Butterscotch VM/interpreter tracing checks" OFF)
-    if(ENABLE_VM_TRACING)
-        add_compile_definitions(ENABLE_VM_TRACING)
-    endif()
-
-    # Butterscotch VM opcode count profiler
-    option(ENABLE_VM_OPCODE_PROFILER "Enable Butterscotch VM opcode count profiler" OFF)
-    if(ENABLE_VM_OPCODE_PROFILER)
-        add_compile_definitions(ENABLE_VM_OPCODE_PROFILER)
-    endif()
-
-    # Spatial grid logs
-    option(ENABLE_SPATIAL_GRID_LOGS "Enable Spatial Grid logs" OFF)
-    if(ENABLE_SPATIAL_GRID_LOGS)
-        add_compile_definitions(ENABLE_SPATIAL_GRID_LOGS)
-    endif()
-
-    # VM unknown/stubbed function logs
-    option(ENABLE_VM_STUB_LOGS "Enable VM unknown/stubbed function logs" OFF)
-    if(ENABLE_VM_STUB_LOGS)
-        add_compile_definitions(ENABLE_VM_STUB_LOGS)
-    endif()
-    
     # stb_image
     target_include_directories(butterscotch PUBLIC vendor/stb/image)
 
@@ -459,6 +432,47 @@ elseif(PLATFORM STREQUAL "ps3")
     find_package(SDL2 REQUIRED)
     target_include_directories(butterscotch PRIVATE ${SDL2_INCLUDE_DIRS})
     target_link_libraries(butterscotch PRIVATE ${SDL2_LIBRARIES} m gcm_sys rsx sysutil io audio rt lv2 io audio bz2)
+elseif(PLATFORM STREQUAL "vita")
+    include("${VITASDK}/share/vita.cmake" REQUIRED)
+
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-optimize-sibling-calls -fsigned-char -marm")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-optimize-sibling-calls -fsigned-char -marm")
+    set(VITA_APP_NAME "Butterscotch")
+    set(VITA_TITLEID  "BTSC00001")
+    set(VITA_VERSION  "01.00")
+    set(VITA_MKSFOEX_FLAGS "-d ATTRIBUTE2=12")
+
+    file(GLOB GL_SOURCES src/gl/*.c src/image/*.c)
+    target_sources(butterscotch PRIVATE ${GL_SOURCES})
+    target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/gl)
+    target_include_directories(butterscotch PRIVATE ${CMAKE_SOURCE_DIR}/src/image)
+
+    # stb_image
+    target_include_directories(butterscotch PUBLIC vendor/stb/image)
+
+    # stb_vorbis
+    target_include_directories(butterscotch PUBLIC vendor/stb/vorbis)
+
+    # Platform identifier for PSVita-specific code paths
+    add_compile_definitions(PLATFORM_VITA)
+    add_compile_definitions(AL_LIBTYPE_STATIC)
+ 
+    target_include_directories(butterscotch PRIVATE ${SDL2_INCLUDE_DIRS})
+    target_link_libraries(butterscotch PRIVATE openal bz2 vitaGL stdc++ SceAudio_stub SceAudioIn_stub SceLibKernel_stub SceAppMgr_stub SceAppUtil_stub mathneon
+	c SceCommonDialog_stub m SceGxm_stub SceDisplay_stub SceSysmodule_stub
+	vitashark SceShaccCg_stub SceKernelDmacMgr_stub stdc++ SceCtrl_stub
+	pthread SceShaccCgExt taihen_stub)
+    vita_create_self(${PROJECT_NAME}.self ${PROJECT_NAME})
+    # The FILE directive lets you add additional files to the VPK, the syntax is
+    # FILE src_path dst_path_in_vpk. In this case, we add the LiveArea paths.
+    vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
+    VERSION ${VITA_VERSION}
+    NAME ${VITA_APP_NAME}
+    FILE sce_sys/icon0.png sce_sys/icon0.png
+    FILE sce_sys/livearea/contents/bg.png sce_sys/livearea/contents/bg.png
+    FILE sce_sys/livearea/contents/startup.png sce_sys/livearea/contents/startup.png
+    FILE sce_sys/livearea/contents/template.xml sce_sys/livearea/contents/template.xml
+    )
 else()
     message(FATAL_ERROR "Unknown platform! ${PLATFORM}")
 endif()

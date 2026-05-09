@@ -1,6 +1,7 @@
 build/
 build_ps2/
 build_ps3/
+build_vita/
 .gitignore
 .cache
 CMakeUserPresets.json

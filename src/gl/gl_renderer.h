@@ -4,6 +4,9 @@
 #include "renderer.h"
 #ifdef __EMSCRIPTEN__
 #include <GLES3/gl3.h>
+#elif defined(PLATFORM_VITA)
+#include <vitasdk.h>
+#include <vitaGL.h>
 #else
 #include <glad/glad.h>
 #endif
