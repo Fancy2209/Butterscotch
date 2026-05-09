@@ -346,4 +346,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: butterscotch-vita
-          path: build/butterscotch.vpk
+          path: |
+            build/butterscotch
+            build/butterscotch.vpk
