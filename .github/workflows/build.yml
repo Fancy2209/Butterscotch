@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, psvita]
   pull_request:
-    branches: [main]
+    branches: [main, psvita]
 
 jobs:
   build-glfw-linux-x86_64:
@@ -328,3 +328,22 @@ jobs:
         with:
           name: butterscotch-ps3
           path: build/butterscotch.self
+
+  build-vita:
+    name: Build (PS3)
+    runs-on: ubuntu-latest
+    container: vitasdk/vitasdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DPLATFORM=vita -DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Build
+        run: |
+          cmake --build build --parallel $(nproc)
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: butterscotch-vita
+          path: build/butterscotch.vpk
