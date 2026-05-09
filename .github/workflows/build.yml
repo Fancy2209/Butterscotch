@@ -330,7 +330,7 @@ jobs:
           path: build/butterscotch.self
 
   build-vita:
-    name: Build (PS3)
+    name: Build (Vita)
     runs-on: ubuntu-latest
     container: vitasdk/vitasdk
     steps:
