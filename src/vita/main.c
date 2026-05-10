@@ -16,7 +16,7 @@
 #include "debug_overlay.h"
 #include "gl_renderer.h"
 #include "overlay_file_system.h"
-#include "noop_audio_system.h"
+#include "al_audio_system.h"
 #include "stb_ds.h"
 #include "stb_image_write.h"
 
