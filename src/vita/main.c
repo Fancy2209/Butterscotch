@@ -262,7 +262,10 @@ int main(int argc, char* argv[]) {
 
         renderer->vtable->endFrame(renderer);
 
-        vglSwapBuffers(GL_FALSE);
+        if (runner->pendingRoom == -1) {
+            vglSwapBuffers(GL_FALSE);
+        }
+        Runner_handlePendingRoomChange(runner);
 
         // Limit frame rate to room speed (skip in headless mode for max speed!!)
         if (runner->currentRoom->speed > 0) {
