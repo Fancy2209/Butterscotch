@@ -31,12 +31,47 @@
     #define GLSL_VERSION_DIRECTIVE "#version 300 es\n"
     #define GLSL_VERTEX_PRECISION  "precision highp float;\n"
     #define GLSL_FRAGMENT_PRECISION "precision mediump float;\n"
+#elif defined(PLATFORM_VITA)
+    #define GLSL_VERSION_DIRECTIVE "#version 100\n"
+    #define GLSL_VERTEX_PRECISION  "precision highp float;\n"
+    #define GLSL_FRAGMENT_PRECISION "precision mediump float;\n"
 #else
     #define GLSL_VERSION_DIRECTIVE "#version 410 core\n"
     #define GLSL_VERTEX_PRECISION  ""
     #define GLSL_FRAGMENT_PRECISION ""
 #endif
 
+#if defined(PLATFORM_VITA)
+static const char* vertexShaderSource =
+    GLSL_VERSION_DIRECTIVE
+    GLSL_VERTEX_PRECISION
+    "attribute vec2 aPos;\n"
+    "attribute vec2 aTexCoord;\n"
+    "attribute vec4 aColor;\n"
+    "uniform mat4 uProjection;\n"
+    "varying vec2 vTexCoord;\n"
+    "varying vec4 vColor;\n"
+    "void main() {\n"
+    "    gl_Position = uProjection * vec4(aPos, 0.0, 1.0);\n"
+    "    vTexCoord = aTexCoord;\n"
+    "    vColor = aColor;\n"
+    "}\n";
+
+static const char* fragmentShaderSource =
+    GLSL_VERSION_DIRECTIVE
+    GLSL_FRAGMENT_PRECISION
+    "varying vec2 vTexCoord;\n"
+    "varying vec4 vColor;\n"
+    "uniform sampler2D uTexture;\n"
+    "uniform float uAlphaTestRef;\n" // negative = disabled
+    "uniform vec4 uFogColor;\n" // rgb = fog color, a = enable flag (0 or 1)
+    "void main() {\n"
+    "    vec4 c = texture2D(uTexture, vTexCoord) * vColor;\n"
+    "    if (uAlphaTestRef >= c.a) discard;\n"
+    "    c.rgb = mix(c.rgb, uFogColor.rgb, uFogColor.a);\n"
+    "    gl_FragColor = c;\n"
+    "}\n";
+#else
 static const char* vertexShaderSource =
     GLSL_VERSION_DIRECTIVE
     GLSL_VERTEX_PRECISION
@@ -67,6 +102,7 @@ static const char* fragmentShaderSource =
     "    c.rgb = mix(c.rgb, uFogColor.rgb, uFogColor.a);\n"
     "    fragColor = c;\n"
     "}\n";
+#endif
 
 
 // ===[ Shader Compilation ]===
@@ -138,6 +174,9 @@ static void glInit(Renderer* renderer, DataWin* dataWin) {
     glDeleteShader(vertShader);
     glDeleteShader(fragShader);
 
+    gl->aPos =      glGetAttribLocation(gl->shaderProgram, "aPos");
+    gl->aTexCoord = glGetAttribLocation(gl->shaderProgram, "aTexCoord");
+    gl->aColor =    glGetAttribLocation(gl->shaderProgram, "aColor");
     gl->uProjection = glGetUniformLocation(gl->shaderProgram, "uProjection");
     gl->uTexture = glGetUniformLocation(gl->shaderProgram, "uTexture");
     gl->uAlphaTestRef = glGetUniformLocation(gl->shaderProgram, "uAlphaTestRef");
@@ -180,11 +219,11 @@ static void glInit(Renderer* renderer, DataWin* dataWin) {
 
     // Vertex attributes: pos(2f), texcoord(2f), color(4f)
     int32_t stride = FLOATS_PER_VERTEX * (int32_t) sizeof(float);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, (void*) 0);
+    glVertexAttribPointer(gl->aPos, 2, GL_FLOAT, GL_FALSE, stride, (void*) 0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*) (2 * sizeof(float)));
+    glVertexAttribPointer(gl->aTexCoord, 2, GL_FLOAT, GL_FALSE, stride, (void*) (2 * sizeof(float)));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, stride, (void*) (4 * sizeof(float)));
+    glVertexAttribPointer(gl->aColor, 4, GL_FLOAT, GL_FALSE, stride, (void*) (4 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
     glBindVertexArray(0);

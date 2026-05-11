@@ -17,6 +17,9 @@ typedef struct {
     Renderer base; // Must be first field for struct embedding
 
     GLuint shaderProgram;
+    GLint aPos;
+    GLint aTexCoord;
+    GLint aColor;
     GLint uProjection;
     GLint uTexture;
     GLint uAlphaTestRef;
