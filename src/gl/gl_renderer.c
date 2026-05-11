@@ -220,11 +220,11 @@ static void glInit(Renderer* renderer, DataWin* dataWin) {
     // Vertex attributes: pos(2f), texcoord(2f), color(4f)
     int32_t stride = FLOATS_PER_VERTEX * (int32_t) sizeof(float);
     glVertexAttribPointer(gl->aPos, 2, GL_FLOAT, GL_FALSE, stride, (void*) 0);
-    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(gl->aPos);
     glVertexAttribPointer(gl->aTexCoord, 2, GL_FLOAT, GL_FALSE, stride, (void*) (2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(gl->aTexCoord);
     glVertexAttribPointer(gl->aColor, 4, GL_FLOAT, GL_FALSE, stride, (void*) (4 * sizeof(float)));
-    glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(gl->aColor);
 
     glBindVertexArray(0);
 
