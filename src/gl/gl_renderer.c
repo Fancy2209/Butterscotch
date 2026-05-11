@@ -489,6 +489,9 @@ static bool ensureTextureLoaded(GLRenderer* gl, uint32_t pageId) {
         fprintf(stderr, "GL: Failed to decode TXTR page %u\n", pageId);
         return false;
     }
+#if defined(PLATFORM_VITA)
+    free(txtr->blobData);
+#endif
 
     gl->textureWidths[pageId] = w;
     gl->textureHeights[pageId] = h;
