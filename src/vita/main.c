@@ -144,7 +144,9 @@ int main(int argc, char* argv[]) {
 	scePowerSetGpuClockFrequency(222);
 	scePowerSetGpuXbarClockFrequency(166);
 	vglUseTripleBuffering(GL_FALSE);
-	vglInitWithCustomThreshold(0, 960, 544, 16 * 1024 * 1024, 32 * 1024 * 1024, 0, 26 * 1024 * 1024, SCE_GXM_MULTISAMPLE_NONE);
+    vglSetParamBufferSize(4 * 1024 * 1024);
+    vglSetCircularPoolSize(1024 * 1024);
+    vglInitWithCustomThreshold(0, 960, 544, 4 * 1024 * 1024, 0, 0, 0, SCE_GXM_MULTISAMPLE_NONE);
     sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_WIDE);
 
     // Initialize the renderer
