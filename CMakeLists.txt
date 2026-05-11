@@ -453,6 +453,10 @@ elseif(PLATFORM STREQUAL "vita")
     # stb_vorbis
     target_include_directories(butterscotch PUBLIC vendor/stb/vorbis)
 
+    # miniaudio
+    target_include_directories(butterscotch PUBLIC vendor/miniaudio)
+
+
     # Platform identifier for PSVita-specific code paths
     add_compile_definitions(PLATFORM_VITA)
     add_compile_definitions(AL_LIBTYPE_STATIC)

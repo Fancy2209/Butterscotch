@@ -2,8 +2,7 @@
 
 #include "common.h"
 #include "audio_system.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "miniaudio.h"
 
 #define MAX_SOUND_INSTANCES 128
 #define SOUND_INSTANCE_ID_BASE 100000
@@ -15,8 +14,9 @@ typedef struct {
     bool active;
     int32_t soundIndex; // SOND resource that spawned this
     int32_t instanceId; // unique ID returned to GML
-    ALuint alSource; // OpenAL source object
-    ALuint alBuffer; // OpenAL buffer object
+    ma_sound maSound; // miniaudio sound object
+    ma_decoder decoder; // decoder for memory-based audio
+    bool ownsDecoder; // true if decoder needs uninit
     float targetGain;
     float currentGain;
     float fadeTimeRemaining;
@@ -32,12 +32,11 @@ typedef struct {
 
 typedef struct {
     AudioSystem base;
-    ALCdevice* alDevice;
-    ALCcontext* alContext;
+    ma_engine engine;
     SoundInstance instances[MAX_SOUND_INSTANCES];
     int32_t nextInstanceCounter;
     FileSystem* fileSystem;
     AudioStreamEntry streams[MAX_AUDIO_STREAMS];
-} AlAudioSystem;
+} MaAudioSystem;
 
-AlAudioSystem* AlAudioSystem_create(void);
+MaAudioSystem* MaAudioSystem_create(void);

@@ -16,7 +16,7 @@
 #include "debug_overlay.h"
 #include "gl_renderer.h"
 #include "overlay_file_system.h"
-#include "al_audio_system.h"
+#include "ma_audio_system.h"
 #include "stb_ds.h"
 #include "stb_image_write.h"
 
@@ -38,6 +38,7 @@ const PadMapping PAD_MAPPINGS[] = {
     { SCE_CTRL_SELECT,   VK_ESCAPE },
     { SCE_CTRL_CROSS,    'Z' },
     { SCE_CTRL_SQUARE,   'X' },
+    { SCE_CTRL_CIRCLE,   'X' },
     { SCE_CTRL_TRIANGLE, 'C' },
     { SCE_CTRL_L1,       VK_PAGEDOWN },
     { SCE_CTRL_R1,       VK_PAGEUP },
@@ -55,8 +56,8 @@ typedef struct {
 } StickMapping;
 
 const StickMapping STICK_MAPPINGS[] = {
-    { true, -1, VK_LEFT  },
-    { true, +1, VK_RIGHT },
+    { true, -1,  VK_LEFT  },
+    { true, +1,  VK_RIGHT },
     { false, -1, VK_UP    },
     { false, +1, VK_DOWN  },
 };
@@ -150,7 +151,7 @@ int main(int argc, char* argv[]) {
     Renderer* renderer = GLRenderer_create();
 
     // Initialize the audio system
-    AudioSystem* audioSystem = (AudioSystem*) AlAudioSystem_create();
+    AudioSystem* audioSystem = (AudioSystem*) MaAudioSystem_create();
 
     // Initialize the runner
     Runner* runner = Runner_create(dataWin, vm, renderer, (FileSystem*) overlayFs, audioSystem);
