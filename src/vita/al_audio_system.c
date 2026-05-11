@@ -278,7 +278,7 @@ static int32_t maPlaySound(AudioSystem* audio, int32_t soundIndex, int32_t prior
                 wav.header.sample_rate
             );
             alSourcei(slot->alSource, AL_BUFFER, slot->alBuffer);
-            if(wav.data != NULL) free(wav.data);
+            // if(wav.data != NULL) free(wav.data);
         } else {
             // External audio: load from file
             char* path = resolveExternalPath(ma, sound);
