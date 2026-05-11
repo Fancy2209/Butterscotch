@@ -336,6 +336,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Vita3K
+        run: |
+          git clone --depth=1 https://github.com/rinnegatamante/vitaShaRK
+          cd vitaShaRK
+          make install -j($nrpoc)
+
+      - name: Install Vita3K
+        run: |
+          git clone --depth=1 https://github.com/Rinnegatamante/vitaGL
+          cd vitaGL
+          make LOG_ERRORS=2 HAVE_DEBUGGER=1 HAVE_VITA3K_SUPPORT=1 NO_SPLASHSCREEN=1 install -j($nrpoc)
+
       - name: Configure
         run: cmake -B build -DPLATFORM=vita -DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
