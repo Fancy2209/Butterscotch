@@ -24,6 +24,45 @@
 #include "profiler.h"
 __attribute__((used)) int _newlib_heap_size_user = 246 * 1024 * 1024;
 
+typedef struct {
+    uint32_t mask;
+    int32_t gmlKey;
+} PadMapping;
+
+const PadMapping PAD_MAPPINGS[] = {
+    { SCE_CTRL_UP,       VK_UP },
+    { SCE_CTRL_DOWN,     VK_DOWN },
+    { SCE_CTRL_LEFT,     VK_LEFT },
+    { SCE_CTRL_RIGHT,    VK_RIGHT },
+    { SCE_CTRL_START,    'C' },
+    { SCE_CTRL_SELECT,   VK_ESCAPE },
+    { SCE_CTRL_CROSS,    'Z' },
+    { SCE_CTRL_SQUARE,   'X' },
+    { SCE_CTRL_TRIANGLE, 'C' },
+    { SCE_CTRL_L1,       VK_PAGEDOWN },
+    { SCE_CTRL_R1,       VK_PAGEUP },
+};
+static const int PAD_MAPPING_COUNT = sizeof(PAD_MAPPINGS) / sizeof(PAD_MAPPINGS[0]);
+static bool prevState[sizeof(PAD_MAPPINGS) / sizeof(PAD_MAPPINGS[0])] = {0};
+
+#define STICK_CENTER 0x80 // The center of the stick (range 0x00-0xFF)
+#define STICK_THRESHOLD 0x40 // The threshold for treating stick movement as a d-pad press
+
+typedef struct {
+    bool isX;
+    int8_t  sign;
+    int32_t gmlKey;
+} StickMapping;
+
+const StickMapping STICK_MAPPINGS[] = {
+    { true, -1, VK_LEFT  },
+    { true, +1, VK_RIGHT },
+    { false, -1, VK_UP    },
+    { false, +1, VK_DOWN  },
+};
+static const int STICK_MAPPING_COUNT = sizeof(STICK_MAPPINGS) / sizeof(STICK_MAPPINGS[0]);
+static bool prevStickState[sizeof(STICK_MAPPINGS) / sizeof(STICK_MAPPINGS[0])] = {0};
+
 #define DATA_WIN "ux0:data/butterscotch/data.win"
 
 double vitaGetTime(void) {
@@ -127,6 +166,42 @@ int main(int argc, char* argv[]) {
         // Clear last frame's pressed/released state, then poll new input events
         RunnerKeyboard_beginFrame(runner->keyboard);
         RunnerGamepad_beginFrame(runner->gamepads);
+
+        SceCtrlData ctrl;
+        sceCtrlPeekBufferPositive(0, &ctrl, 1);
+        repeat(PAD_MAPPING_COUNT, i) {
+            uint32_t mask = PAD_MAPPINGS[i].mask;
+            int32_t gmlKey = PAD_MAPPINGS[i].gmlKey;
+
+            bool isPressed = (ctrl.buttons & mask) != 0;
+            bool wasPressed = prevState[i];
+
+            if (isPressed && !wasPressed) {
+                RunnerKeyboard_onKeyDown(runner->keyboard, gmlKey);
+            } else if (!isPressed && wasPressed) {
+                RunnerKeyboard_onKeyUp(runner->keyboard, gmlKey);
+            }
+
+            prevState[i] = isPressed;
+        }
+
+        repeat(STICK_MAPPING_COUNT, i) {
+            unsigned int axisValue = STICK_MAPPINGS[i].isX ? ctrl.lx : ctrl.ly;
+        
+            int signedDelta = STICK_MAPPINGS[i].sign * (axisValue - STICK_CENTER);
+
+            bool isPressed = signedDelta > STICK_THRESHOLD;
+            bool wasPressed = prevStickState[i];        
+            int32_t gmlKey = STICK_MAPPINGS[i].gmlKey;
+
+            if (isPressed && !wasPressed) {
+                RunnerKeyboard_onKeyDown(runner->keyboard, gmlKey);
+            } else if (!isPressed && wasPressed) {
+                RunnerKeyboard_onKeyUp(runner->keyboard, gmlKey);        
+            }
+
+            prevStickState[i] = isPressed;
+        }
 
         // Run the game step if the game is paused
         bool shouldStep = true;
